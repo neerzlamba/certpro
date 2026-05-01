@@ -107,6 +107,15 @@
             .tab-btn { font-size: 0.68rem; padding: 10px 4px; }
             .portal-logo { font-size: 1rem; }
         }
+        /* Demo Login Button Role Colors */
+        .demo-btn-super   { background: #0f172a !important; color: #fff !important; border-color: #0f172a !important; }
+        .demo-btn-admin   { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
+        .demo-btn-staff   { background: #d97706 !important; color: #fff !important; border-color: #d97706 !important; }
+        .demo-btn-student { background: #16a34a !important; color: #fff !important; border-color: #16a34a !important; }
+        .demo-btn-super:hover   { background: #1e293b !important; }
+        .demo-btn-admin:hover   { background: #1d4ed8 !important; }
+        .demo-btn-staff:hover   { background: #b45309 !important; }
+        .demo-btn-student:hover { background: #15803d !important; }
     </style>
 </head>
 <body>
@@ -142,10 +151,10 @@
                 <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
                     <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 15px; font-family:var(--font-mono); text-transform:uppercase;">Demo Login Shortcuts</p>
                     <div class="form-row" style="gap:8px;">
-                        <button class="btn" style="font-size:0.75rem; background:#0f172a; color:#fff; border:none;" onclick="quickLogin('super@cert.com', 'super123')">⚡ Super Admin</button>
-                        <button class="btn" style="font-size:0.75rem; background:#2563eb; color:#fff; border:none;" onclick="quickLogin('admin@uni1.com', 'admin123')">🏛 Uni Admin</button>
-                        <button class="btn" style="font-size:0.75rem; background:#d97706; color:#fff; border:none;" onclick="quickLogin('staff@uni1.com', 'staff123')">🗂 Staff</button>
-                        <button class="btn" style="font-size:0.75rem; background:#16a34a; color:#fff; border:none;" onclick="quickLogin('student@uni1.com', 'student123')">🎓 Student</button>
+                        <button class="btn demo-btn-super" onclick="quickLogin('super@cert.com', 'super123')">⚡ Super Admin</button>
+                        <button class="btn demo-btn-admin" onclick="quickLogin('admin@uni1.com', 'admin123')">🏛 Uni Admin</button>
+                        <button class="btn demo-btn-staff" onclick="quickLogin('staff@uni1.com', 'staff123')">🗂 Staff</button>
+                        <button class="btn demo-btn-student" onclick="quickLogin('student@uni1.com', 'student123')">🎓 Student</button>
                     </div>
                 </div>
             </div>
