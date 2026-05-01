@@ -5,52 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Certificates | Admin | CertPro</title>
     <link rel="stylesheet" href="../assets/style.css">
-    <style>
-        /* ── QR Modal styles ─────────────────────────────── */
-        #qrModal .modal-content { max-width: 420px; text-align: center; }
-        #qrDisplayBox {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            background: #fff;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            margin: 16px 0;
-            min-height: 180px;
-        }
-        #qrDisplayBox canvas, #qrDisplayBox img { display: block; }
-        .qr-cert-info { font-size: 0.78rem; color: var(--text-tertiary); font-family: var(--font-mono); word-break: break-all; margin-bottom: 12px; }
-        .btn-qr {
-            padding: 4px 8px;
-            font-size: 0.75rem;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .btn-qr:hover { opacity: 0.88; }
-
-        /* Backfill banner */
-        #backfillBanner {
-            background: linear-gradient(90deg, #1e293b, #334155);
-            color: #e2e8f0;
-            padding: 12px 18px;
-            border-radius: 8px;
-            margin-bottom: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        #backfillBanner span { font-size: 0.88rem; }
-        #backfillProgress { font-size: 0.78rem; color: #94a3b8; margin-top: 4px; }
-    </style>
 </head>
 <body>
     <div class="wrapper">
@@ -58,20 +12,9 @@
         <main class="main-content">
             <div class="page-header">
                 <h1 class="page-title">University Certificates Ledger</h1>
-                <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                    <button class="btn btn-qr" id="btnBackfillQR" style="display:none;" onclick="backfillAllQR()">
-                        <i data-lucide="qr-code" style="width:14px;height:14px;"></i> Generate QR for All
-                    </button>
+                <div style="display:flex;gap:10px;">
                     <button class="btn" id="btnExport" style="display:none;align-items:center;gap:6px;border:1px solid var(--border-color);" onclick="exportCerts()"><i data-lucide="download" style="width:16px;height:16px;"></i> Export CSV</button>
                     <button class="btn btn-primary" id="btnIssue" style="display:none;align-items:center;gap:6px;" onclick="openCertModal()"><i data-lucide="plus" style="width:16px;height:16px;"></i> Issue New Certificate</button>
-                </div>
-            </div>
-
-            <!-- Backfill progress banner (shown during backfill) -->
-            <div id="backfillBanner" style="display:none;">
-                <div>
-                    <span>🔄 Generating QR codes for existing certificates…</span>
-                    <div id="backfillProgress">Processing…</div>
                 </div>
             </div>
 
@@ -85,7 +28,7 @@
         </main>
     </div>
 
-    <!-- Create / Edit Cert Modal -->
+    <!-- Create Cert Modal -->
     <div id="certModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -112,7 +55,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn" style="color:var(--text-main); border:1px solid #ccc; background:#fff" onclick="closeModal('certModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Generate &amp; Issue</button>
+                    <button type="submit" class="btn btn-primary">Generate & Issue</button>
                 </div>
             </form>
         </div>
@@ -120,59 +63,14 @@
 
     <!-- View Modal -->
     <div id="viewModal" class="modal-overlay">
-        <div class="modal-content" id="certBoxWrapper" style="max-width:700px;">
+        <div class="modal-content" style="max-width:600px;">
             <div class="modal-header">
-                <h2>Certificate Document</h2>
+                <h2>Certificate Records</h2>
                 <button class="modal-close" onclick="closeModal('viewModal')">✕</button>
             </div>
-            
-            <div id="certContainer" style="background:#fff; border: 12px solid #000; padding:40px; text-align:center; position:relative; min-height:400px; display:flex; flex-direction:column; justify-content:center;">
-                <h1 style="font-family:serif; font-size:2.5rem; margin-bottom:10px; color:var(--text-main)" id="cUni">University Name</h1>
-                <h3 style="font-family:serif; font-weight:normal; color:#555; margin-bottom:30px;" id="cType">Certificate Type</h3>
-                
-                <p style="font-size:1.1rem; margin-bottom:10px;">This is to certify that</p>
-                <h2 style="font-size:2rem; font-family:serif; margin-bottom:10px; text-decoration:underline;" id="cStudent">Student Name</h2>
-                
-                <p style="font-size:1.1rem; margin-bottom:10px;">has successfully completed the requirements for</p>
-                <h2 style="font-size:1.5rem; font-family:serif; margin-bottom:40px;" id="cCourse">Course Name</h2>
-                
-                <div style="display:flex; justify-content:space-between; margin-top:30px; border-top:1px solid #ccc; padding-top:10px;">
-                    <div style="text-align:left;">
-                        <p style="font-size:0.8rem; color:#777;">Certificate ID</p>
-                        <strong id="cId" style="font-family:monospace;">---</strong>
-                    </div>
-                    <div style="text-align:right;">
-                        <p style="font-size:0.8rem; color:#777;">Issue Date</p>
-                        <strong id="cDate">---</strong>
-                    </div>
-                </div>
-
-                <!-- QR Code Display Area in Certificate -->
-                <div style="position: absolute; bottom: 40px; right: 40px; width: 90px; height: 90px; border: 1px solid #ccc; padding: 4px; background: #fff;" id="cQrBox">
-                    <div style="font-size: 0.6rem; color: #999; text-align: center; display: flex; align-items: center; justify-content: center; height: 100%;">No QR</div>
-                </div>
-            </div>
-
-            <div class="modal-footer" style="justify-content:space-between; margin-top:20px;">
-                <div style="font-size:0.85rem; color:var(--text-secondary);" id="cStatusInfo"></div>
-                <button type="button" class="btn" style="border:1px solid #ccc;" onclick="closeModal('viewModal')">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- QR Code Modal -->
-    <div id="qrModal" class="modal-overlay">
-        <div class="modal-content" style="max-width:420px;">
-            <div class="modal-header">
-                <h2>QR Code — Certificate</h2>
-                <button class="modal-close" onclick="closeModal('qrModal')">✕</button>
-            </div>
-            <p style="font-size:0.85rem; color:var(--text-tertiary); margin-bottom:4px;">Scan to verify this certificate online.</p>
-            <div id="qrDisplayBox"><span style="color:var(--text-tertiary);font-size:0.8rem;">Generating…</span></div>
-            <p class="qr-cert-info" id="qrCertIdLabel"></p>
-            <div class="modal-footer" style="justify-content:space-between;">
-                <button class="btn btn-primary" onclick="downloadQR()"><i data-lucide="download" style="width:14px;height:14px;margin-right:4px;"></i>Download QR</button>
-                <button type="button" class="btn" style="border:1px solid #ccc;" onclick="closeModal('qrModal')">Close</button>
+            <div id="viewContent" style="line-height:2;"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="closeModal('viewModal')">Close</button>
             </div>
         </div>
     </div>
@@ -188,7 +86,6 @@
             renderNav(session.role);
             if(hasPermission('create_cert')) document.getElementById('btnIssue').style.display = 'flex';
             if(hasPermission('export_data')) document.getElementById('btnExport').style.display = 'flex';
-            if(hasPermission('create_cert') || hasPermission('edit_cert')) document.getElementById('btnBackfillQR').style.display = 'flex';
             loadDropdowns();
             loadData();
         }
@@ -219,21 +116,15 @@
             const search = document.getElementById('searchInput').value.toLowerCase();
             let filtered = myCerts.filter(c => c.id.toLowerCase().includes(search) || c.issuedAt.includes(search));
 
-            const headers = ['Cert ID', 'Student', 'Course Format', 'Cert Type', 'Date', 'Generated By', 'Status', 'QR', 'Actions'];
+            const headers = ['Cert ID', 'Student', 'Course Format', 'Cert Type', 'Date', 'Generated By', 'Status', 'Actions'];
             const rows = filtered.map(c => {
                 const s = getById('students', c.studentId);
                 const stuName = s ? getUserName(s.userId) : 'Unknown';
                 const staffName = getUserName(c.issuedBy);
-
-                // QR indicator
-                const hasQR = !!c.qrDataUrl;
-                const qrCell = hasQR
-                    ? `<button class="btn-qr" onclick="showQR('${c.id}')" title="View QR Code"><i data-lucide="qr-code" style="width:12px;height:12px;"></i> View</button>`
-                    : `<button class="btn btn-qr" onclick="generateAndSaveQR('${c.id}', true)" title="Generate QR"><i data-lucide="qr-code" style="width:12px;height:12px;"></i> <span style="font-size:0.7rem;color:#fca5a5;">Gen</span></button>`;
-
-                let actionHtml = `<div style="display:flex;gap:4px;flex-wrap:wrap;">`;
+                
+                let actionHtml = `<div style="display:flex;gap:4px;">`;
                 actionHtml += `<button class="btn btn-primary" style="padding:4px 8px;font-size:0.75rem;" onclick="viewCert('${c.id}')"><i data-lucide="eye" style="width:12px;height:12px;"></i></button>`;
-
+                
                 if (c.status === 'pending' && hasPermission('approve_cert')) {
                     actionHtml += `<button class="btn btn-success" style="padding:4px 8px;font-size:0.75rem;" onclick="updateStatus('${c.id}', 'approve')"><i data-lucide="check" style="width:12px;height:12px;"></i></button>`;
                 }
@@ -250,7 +141,7 @@
                     actionHtml += `<button class="btn btn-danger" style="padding:4px 8px;font-size:0.75rem;" onclick="deleteCert('${c.id}')"><i data-lucide="trash-2" style="width:12px;height:12px;"></i></button>`;
                 }
                 actionHtml += `</div>`;
-
+                
                 return [
                     `<div style="display:flex;align-items:center;gap:8px;">
                         <span style="font-family:monospace;font-size:0.8rem">${c.id}</span>
@@ -262,7 +153,6 @@
                     formatDate(c.issuedAt),
                     staffName,
                     getStatusBadge(c.status),
-                    qrCell,
                     actionHtml
                 ];
             });
@@ -270,142 +160,6 @@
             if (window.lucide) window.lucide.createIcons();
         }
 
-        /* ────────────────────────────────────────────────
-           QR CODE ENGINE
-        ──────────────────────────────────────────────── */
-
-        // Build the verification URL that will be encoded into the QR
-        function buildVerifyUrl(certId) {
-            return window.location.origin + '/portal.html?tab=verify&id=' + certId;
-        }
-
-        // Generate a QR code for a given URL and return a Promise<dataUrl>
-        function generateQRDataUrl(text) {
-            return new Promise((resolve, reject) => {
-                const container = document.createElement('div');
-                container.style.position = 'fixed';
-                container.style.left = '-9999px';
-                document.body.appendChild(container);
-
-                try {
-                    const qr = new QRCode(container, {
-                        text: text,
-                        width: 200,
-                        height: 200,
-                        colorDark: '#000000',
-                        colorLight: '#ffffff',
-                        correctLevel: QRCode.CorrectLevel.H
-                    });
-                    // QRCode.js renders synchronously — grab the canvas/img
-                    setTimeout(() => {
-                        const canvas = container.querySelector('canvas');
-                        const img    = container.querySelector('img');
-                        let dataUrl;
-                        if (canvas) {
-                            dataUrl = canvas.toDataURL('image/png');
-                        } else if (img) {
-                            dataUrl = img.src; // fallback (data-uri src)
-                        }
-                        document.body.removeChild(container);
-                        if (dataUrl) resolve(dataUrl);
-                        else reject(new Error('QR render failed'));
-                    }, 150);
-                } catch(e) {
-                    document.body.removeChild(container);
-                    reject(e);
-                }
-            });
-        }
-
-        // Generate, store, and optionally show QR for a single certificate
-        window.generateAndSaveQR = async function(certId, showAfter = false) {
-            if (typeof QRCode === 'undefined') {
-                toast('QR library loading, please try again in a moment.', 'error');
-                return;
-            }
-            const url = buildVerifyUrl(certId);
-            try {
-                const dataUrl = await generateQRDataUrl(url);
-                update('certificates', certId, { qrDataUrl: dataUrl, qrUrl: url });
-                if (showAfter) showQR(certId);
-                return dataUrl;
-            } catch(e) {
-                toast('Failed to generate QR code.', 'error');
-            }
-        }
-
-        // Show QR modal for a certificate (generate on-the-fly if missing)
-        window.showQR = async function(certId) {
-            const c = getById('certificates', certId);
-            if (!c) return;
-
-            document.getElementById('qrCertIdLabel').textContent = 'ID: ' + c.id;
-            const box = document.getElementById('qrDisplayBox');
-            box.innerHTML = '<span style="color:var(--text-tertiary);font-size:0.8rem;">Generating…</span>';
-            openModal('qrModal');
-
-            let dataUrl = c.qrDataUrl;
-            if (!dataUrl) {
-                dataUrl = await generateAndSaveQR(certId);
-            }
-
-            if (dataUrl) {
-                box.innerHTML = `<img src="${dataUrl}" style="width:200px;height:200px;border-radius:4px;" alt="QR Code for cert ${certId}">`;
-            } else {
-                box.innerHTML = '<span style="color:#ef4444;">Failed to generate QR. Check console.</span>';
-            }
-            if (window.lucide) window.lucide.createIcons();
-        }
-
-        // Download QR image from the modal
-        window.downloadQR = function() {
-            const img = document.querySelector('#qrDisplayBox img');
-            if (!img) return toast('No QR to download', 'error');
-            const certId = document.getElementById('qrCertIdLabel').textContent.replace('ID: ', '');
-            const a = document.createElement('a');
-            a.href = img.src;
-            a.download = `QR_${certId}.png`;
-            a.click();
-            toast('QR downloaded', 'success');
-        }
-
-        /* ────────────────────────────────────────────────
-           BACKFILL — generate QR for ALL existing certs
-        ──────────────────────────────────────────────── */
-        window.backfillAllQR = async function() {
-            if (typeof QRCode === 'undefined') {
-                toast('QR library still loading. Try again in 2 seconds.', 'error');
-                return;
-            }
-            const banner   = document.getElementById('backfillBanner');
-            const progress = document.getElementById('backfillProgress');
-            banner.style.display = 'flex';
-
-            const allCerts = getAll('certificates').filter(c => !c.qrDataUrl);
-            if (allCerts.length === 0) {
-                banner.style.display = 'none';
-                toast('All certificates already have QR codes!', 'success');
-                loadData();
-                return;
-            }
-
-            let done = 0;
-            for (const c of allCerts) {
-                progress.textContent = `Processing ${done + 1} / ${allCerts.length} — ${c.id}`;
-                await generateAndSaveQR(c.id, false);
-                done++;
-                // small yield to keep UI responsive
-                await new Promise(r => setTimeout(r, 30));
-            }
-
-            banner.style.display = 'none';
-            toast(`✅ QR codes generated for ${done} certificate(s)`, 'success');
-            loadData();
-        }
-
-        /* ────────────────────────────────────────────────
-           EXISTING HANDLERS (unchanged logic, kept intact)
-        ──────────────────────────────────────────────── */
         window.notifyStudent = function(stuId, context) {
             if(!hasPermission('send_notify')) return toast('Permission Denied', 'error');
             const msg = window.prompt(`Send notification to student regarding ${context}:`, "Your certificate has been processed.");
@@ -415,11 +169,11 @@
 
         window.exportCerts = function() {
             if(!hasPermission('export_data')) return toast('Permission Denied', 'error');
-            let csv = "ID,Student,Course,Date,Status,HasQR\n";
+            let csv = "ID,Student,Course,Date,Status\n";
             myCerts.forEach(c => {
                 const s = getById('students', c.studentId);
                 const sName = s ? getUserName(s.userId) : 'Unknown';
-                csv += `${c.id},"${sName}","${getCourseTypeName(c.courseTypeId)}",${c.issuedAt},${c.status},${c.qrDataUrl ? 'Yes' : 'No'}\n`;
+                csv += `${c.id},"${sName}","${getCourseTypeName(c.courseTypeId)}",${c.issuedAt},${c.status}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
@@ -476,7 +230,7 @@
             document.getElementById('certForm').reset();
             document.getElementById('certId').value = '';
             document.getElementById('certDate').value = new Date().toISOString().split('T')[0];
-
+            
             if (typeof id === 'string' && id) {
                 const c = getById('certificates', id);
                 if (c) {
@@ -490,14 +244,14 @@
             openModal('certModal');
         }
 
-        document.getElementById('certForm').onsubmit = async function(e) {
+        document.getElementById('certForm').onsubmit = function(e) {
             e.preventDefault();
             const id = document.getElementById('certId').value;
             const data = {
-                studentId:    document.getElementById('certStudent').value,
+                studentId: document.getElementById('certStudent').value,
                 courseTypeId: document.getElementById('certCourse').value,
-                certTypeId:   document.getElementById('certType').value,
-                issuedAt:     document.getElementById('certDate').value
+                certTypeId: document.getElementById('certType').value,
+                issuedAt: document.getElementById('certDate').value
             };
 
             if (id) {
@@ -505,8 +259,6 @@
                 update('certificates', id, data);
                 logAction('EDIT_CERT', id, 'Certificate details updated');
                 toast("Certificate updated successfully");
-                closeModal('certModal');
-                loadData();
             } else {
                 if(!hasPermission('create_cert')) return toast('Permission Denied', 'error');
                 const stuId  = document.getElementById('certStudent').value;
@@ -520,43 +272,27 @@
                 data.status = 'issued';
                 data.remarks = '';
                 create('certificates', data);
-                logAction('CREATE_CERT', data.id, 'Certificate generated and issued');
-
-                // Auto-generate QR code for the new certificate
-                closeModal('certModal');
-                toast("Certificate generated — creating QR code…");
-                await generateAndSaveQR(data.id, false);
-                toast("✅ Certificate issued with QR code", "success");
-                loadData();
+                toast("Certificate generated and issued");
             }
+            closeModal('certModal');
+            loadData();
         }
 
         window.viewCert = function(id) {
             const c = getById('certificates', id);
             if (!c) return;
-
-            const cType = getById('certTypes', c.certTypeId);
-            if (cType) {
-                document.getElementById('certContainer').style.borderColor = cType.borderColor;
-            }
-
-            document.getElementById('cUni').innerText = getUniversityName(c.universityId);
-            document.getElementById('cType').innerText = getCertTypeName(c.certTypeId);
             const stu = getById('students', c.studentId);
-            document.getElementById('cStudent').innerText = stu ? getUserName(stu.userId) : 'Unknown';
-            document.getElementById('cCourse').innerText = getCourseTypeName(c.courseTypeId);
-            document.getElementById('cId').innerText = c.id;
-            document.getElementById('cDate').innerText = formatDate(c.issuedAt);
-
-            const qrBox = document.getElementById('cQrBox');
-            if (c.qrDataUrl) {
-                qrBox.innerHTML = `<img src="${c.qrDataUrl}" alt="QR" style="width:100%; height:100%; display:block;">`;
-            } else {
-                qrBox.innerHTML = `<div style="font-size: 0.6rem; color: #999; text-align: center; display: flex; align-items: center; justify-content: center; height: 100%;">No QR</div>`;
-            }
-
-            document.getElementById('cStatusInfo').innerHTML = `<strong>Status:</strong> ${getStatusBadge(c.status)} &nbsp; | &nbsp; <strong>Issued By:</strong> ${getUserName(c.issuedBy)}`;
-
+            const content = document.getElementById('viewContent');
+            content.innerHTML = `
+                <p><strong>Certificate ID:</strong> ${c.id}</p>
+                <p><strong>Student Name:</strong> ${stu ? getUserName(stu.userId) : 'Unknown'}</p>
+                <p><strong>Course Type:</strong> ${getCourseTypeName(c.courseTypeId)}</p>
+                <p><strong>Certificate Type:</strong> ${getCertTypeName(c.certTypeId)}</p>
+                <p><strong>Issued By:</strong> ${getUserName(c.issuedBy)}</p>
+                <p><strong>Issued Date:</strong> ${formatDate(c.issuedAt)}</p>
+                <p><strong>Remarks:</strong> ${c.remarks || 'None'}</p>
+                <p><strong>Current Status:</strong> ${getStatusBadge(c.status)}</p>
+            `;
             openModal('viewModal');
         }
     </script>

@@ -371,41 +371,15 @@
                     <p style="margin-top:10px;">The credential <span style="font-family:monospace;">${c.id}</span> issued to <strong style="color:var(--text-primary);">${getUserName(stu.userId)}</strong> has been cryptographically suspended by ${getUniversityName(c.universityId)}.</p>
                 </div>`;
             } else {
-                const qrHtml = c.qrDataUrl 
-                    ? `<img src="${c.qrDataUrl}" alt="QR" style="width:100%; height:100%; display:block;">` 
-                    : `<div style="font-size: 0.6rem; color: #999; text-align: center; display: flex; align-items: center; justify-content: center; height: 100%;">No QR</div>`;
-                
-                const borderColor = getById('certTypes', c.certTypeId)?.borderColor || '#000';
-                
-                res.innerHTML = `
-                <div style="padding:15px; margin-bottom: 20px; border:1px solid var(--badge-issued-color); border-left:10px solid var(--badge-issued-color); background:#fff;">
-                    <h3 style="color:var(--badge-issued-color); font-family:var(--font-mono); margin: 0;">STATUS: VALID AUTHENTICATED</h3>
-                </div>
-                
-                <div style="background:#fff; border: 12px solid ${borderColor}; padding:40px; text-align:center; position:relative; min-height:400px; display:flex; flex-direction:column; justify-content:center;">
-                    <h1 style="font-family:serif; font-size:2.5rem; margin-bottom:10px; color:var(--text-main)">${getUniversityName(c.universityId)}</h1>
-                    <h3 style="font-family:serif; font-weight:normal; color:#555; margin-bottom:30px;">${getCertTypeName(c.certTypeId)}</h3>
-                    
-                    <p style="font-size:1.1rem; margin-bottom:10px;">This is to certify that</p>
-                    <h2 style="font-size:2rem; font-family:serif; margin-bottom:10px; text-decoration:underline;">${getUserName(stu.userId)}</h2>
-                    
-                    <p style="font-size:1.1rem; margin-bottom:10px;">has successfully completed the requirements for</p>
-                    <h2 style="font-size:1.5rem; font-family:serif; margin-bottom:40px;">${getCourseTypeName(c.courseTypeId)}</h2>
-                    
-                    <div style="display:flex; justify-content:space-between; margin-top:30px; border-top:1px solid #ccc; padding-top:10px;">
-                        <div style="text-align:left;">
-                            <p style="font-size:0.8rem; color:#777;">Certificate ID</p>
-                            <strong style="font-family:monospace;">${c.id}</strong>
-                        </div>
-                        <div style="text-align:right;">
-                            <p style="font-size:0.8rem; color:#777;">Issue Date</p>
-                            <strong>${formatDate(c.issuedAt)}</strong>
-                        </div>
-                    </div>
-
-                    <!-- QR Code Display Area in Certificate -->
-                    <div style="position: absolute; bottom: 40px; right: 40px; width: 90px; height: 90px; border: 1px solid #ccc; padding: 4px; background: #fff;">
-                        ${qrHtml}
+                res.innerHTML = `<div style="padding:20px; border:1px solid var(--badge-issued-color); border-left:10px solid var(--badge-issued-color); background:#fff;">
+                    <h3 style="color:var(--badge-issued-color); font-family:var(--font-mono);">STATUS: VALID AUTHENTICATED</h3>
+                    <div class="verify-result-grid" style="margin-top:20px; display:grid; grid-template-columns: 1fr 1fr; gap:20px; font-size:0.9rem;">
+                        <div><label>Issued To</label><div style="font-weight:600; color:var(--text-primary);">${getUserName(stu.userId)}</div></div>
+                        <div><label>University</label><div style="font-weight:600; color:var(--text-primary);">${getUniversityName(c.universityId)}</div></div>
+                        <div><label>Degree</label><div style="font-weight:600; color:var(--text-primary);">${getCourseTypeName(c.courseTypeId)}</div></div>
+                        <div><label>Type</label><div style="font-weight:600; color:var(--text-primary);">${getCertTypeName(c.certTypeId)}</div></div>
+                        <div><label>Issue Date</label><div style="font-weight:600; color:var(--text-primary);">${formatDate(c.issuedAt)}</div></div>
+                        <div><label>Registry Key</label><div style="font-family:monospace; font-size:0.8rem; background:var(--bg-secondary); padding:4px;">${c.id}</div></div>
                     </div>
                 </div>`;
             }

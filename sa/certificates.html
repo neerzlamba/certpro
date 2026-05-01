@@ -39,42 +39,16 @@
 
     <!-- View Modal -->
     <div id="viewModal" class="modal-overlay">
-        <div class="modal-content" id="certBoxWrapper" style="max-width:700px;">
+        <div class="modal-content" style="max-width:600px;">
             <div class="modal-header">
-                <h2>Certificate Document</h2>
+                <h2>Certificate Details</h2>
                 <button class="modal-close" onclick="closeModal('viewModal')">✕</button>
             </div>
-            
-            <div id="certContainer" style="background:#fff; border: 12px solid #000; padding:40px; text-align:center; position:relative; min-height:400px; display:flex; flex-direction:column; justify-content:center;">
-                <h1 style="font-family:serif; font-size:2.5rem; margin-bottom:10px; color:var(--text-main)" id="cUni">University Name</h1>
-                <h3 style="font-family:serif; font-weight:normal; color:#555; margin-bottom:30px;" id="cType">Certificate Type</h3>
-                
-                <p style="font-size:1.1rem; margin-bottom:10px;">This is to certify that</p>
-                <h2 style="font-size:2rem; font-family:serif; margin-bottom:10px; text-decoration:underline;" id="cStudent">Student Name</h2>
-                
-                <p style="font-size:1.1rem; margin-bottom:10px;">has successfully completed the requirements for</p>
-                <h2 style="font-size:1.5rem; font-family:serif; margin-bottom:40px;" id="cCourse">Course Name</h2>
-                
-                <div style="display:flex; justify-content:space-between; margin-top:30px; border-top:1px solid #ccc; padding-top:10px;">
-                    <div style="text-align:left;">
-                        <p style="font-size:0.8rem; color:#777;">Certificate ID</p>
-                        <strong id="cId" style="font-family:monospace;">---</strong>
-                    </div>
-                    <div style="text-align:right;">
-                        <p style="font-size:0.8rem; color:#777;">Issue Date</p>
-                        <strong id="cDate">---</strong>
-                    </div>
-                </div>
-
-                <!-- QR Code Display Area in Certificate -->
-                <div style="position: absolute; bottom: 40px; right: 40px; width: 90px; height: 90px; border: 1px solid #ccc; padding: 4px; background: #fff;" id="cQrBox">
-                    <div style="font-size: 0.6rem; color: #999; text-align: center; display: flex; align-items: center; justify-content: center; height: 100%;">No QR</div>
-                </div>
+            <div id="viewContent" style="line-height:2;">
+                <!-- Populated by JS -->
             </div>
-
-            <div class="modal-footer" style="justify-content:space-between; margin-top:20px;">
-                <div style="font-size:0.85rem; color:var(--text-secondary);" id="cStatusInfo"></div>
-                <button type="button" class="btn" style="border:1px solid #ccc;" onclick="closeModal('viewModal')">Close</button>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="closeModal('viewModal')">Close</button>
             </div>
         </div>
     </div>
@@ -233,29 +207,18 @@
         window.viewCert = function(id) {
             const c = getById('certificates', id);
             if (!c) return;
-
-            const cType = getById('certTypes', c.certTypeId);
-            if (cType) {
-                document.getElementById('certContainer').style.borderColor = cType.borderColor;
-            }
-
-            document.getElementById('cUni').innerText = getUniversityName(c.universityId);
-            document.getElementById('cType').innerText = getCertTypeName(c.certTypeId);
             const stu = getById('students', c.studentId);
-            document.getElementById('cStudent').innerText = stu ? getUserName(stu.userId) : 'Unknown';
-            document.getElementById('cCourse').innerText = getCourseTypeName(c.courseTypeId);
-            document.getElementById('cId').innerText = c.id;
-            document.getElementById('cDate').innerText = formatDate(c.issuedAt);
-
-            const qrBox = document.getElementById('cQrBox');
-            if (c.qrDataUrl) {
-                qrBox.innerHTML = `<img src="${c.qrDataUrl}" alt="QR" style="width:100%; height:100%; display:block;">`;
-            } else {
-                qrBox.innerHTML = `<div style="font-size: 0.6rem; color: #999; text-align: center; display: flex; align-items: center; justify-content: center; height: 100%;">No QR</div>`;
-            }
-
-            document.getElementById('cStatusInfo').innerHTML = `<strong>Status:</strong> ${getStatusBadge(c.status)} &nbsp; | &nbsp; <strong>Issued By:</strong> ${getUserName(c.issuedBy)}`;
-
+            const content = document.getElementById('viewContent');
+            content.innerHTML = `
+                <p><strong>Certificate ID:</strong> ${c.id}</p>
+                <p><strong>Student Name:</strong> ${stu ? getUserName(stu.userId) : 'Unknown'}</p>
+                <p><strong>Course Type:</strong> ${getCourseTypeName(c.courseTypeId)}</p>
+                <p><strong>Certificate Type:</strong> ${getCertTypeName(c.certTypeId)}</p>
+                <p><strong>University:</strong> ${getUniversityName(c.universityId)}</p>
+                <p><strong>Issued By:</strong> ${getUserName(c.issuedBy)}</p>
+                <p><strong>Issued Date:</strong> ${formatDate(c.issuedAt)}</p>
+                <p><strong>Current Status:</strong> ${getStatusBadge(c.status)}</p>
+            `;
             openModal('viewModal');
         }
 
