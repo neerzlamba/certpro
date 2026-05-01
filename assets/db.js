@@ -92,11 +92,12 @@ function logAction(action, targetId, details) {
 }
 
 function seedData() {
-  const existingUsers = JSON.parse(localStorage.getItem('users'));
-  // Force re-seed if the new identities aren't populated yet
-  if (existingUsers && existingUsers.some(u => u.name === 'Alok Nath (Superadmin)')) return;
+  // ─── BUMP THIS to force all devices to re-seed with fresh data ───
+  const SEED_VERSION = 'v3-certpro-2026';
+  // ─────────────────────────────────────────────────────────────────
+  if (localStorage.getItem('seedVersion') === SEED_VERSION) return;
 
-  // Clear everything out to ensure schema updates take effect
+  // Clear everything and start fresh
   localStorage.clear();
 
   localStorage.setItem('users', JSON.stringify([
@@ -269,6 +270,9 @@ function seedData() {
   localStorage.setItem('staff', JSON.stringify(staff));
   localStorage.setItem('certificates', JSON.stringify(certificates));
   localStorage.setItem('requests', JSON.stringify(requests));
+
+  // Mark seed as complete so this only runs once per device per version
+  localStorage.setItem('seedVersion', SEED_VERSION);
 }
 
 seedData();
