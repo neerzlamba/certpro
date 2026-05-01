@@ -221,8 +221,8 @@ function renderNav(role) {
         { name: 'Course Master', url: 'sa/courses.html' }
       ]},
       { category: 'Records', items: [
-        { name: 'All Certificates', url: 'admin/certificates.html' },
-        { name: 'Action Requests', url: 'admin/requests.html' }
+        { name: 'All Certificates', url: 'sa/certificates.html' },
+        { name: 'Action Requests', url: 'sa/requests.html' }
       ]},
       { category: 'Users & Permissions', items: [
         { name: 'User Management', url: 'sa/users.html' },

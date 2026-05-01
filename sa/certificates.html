@@ -128,7 +128,7 @@
             const uniId = document.getElementById('uniFilter').value;
 
             let filtered = allCerts.filter(c => {
-                const matchSearch = c.id.toLowerCase().includes(search) || c.issuedAt.includes(search);
+                const matchSearch = c.id.toLowerCase().includes(search) || (c.issuedAt || '').includes(search);
                 const matchStatus = status === 'all' || c.status === status;
                 const matchUni = uniId === 'all' || c.universityId === uniId;
                 return matchSearch && matchStatus && matchUni;
