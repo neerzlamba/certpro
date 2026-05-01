@@ -198,7 +198,7 @@ function renderNav(role) {
     'Send Notifications':     'bell',
     'Notification Inbox':     'bell',
     'Add Internal Remarks':   'message-circle',
-    'Report Guidelines':      'book'
+
   };
 
   // Helper to resolve URLs based on current page depth
@@ -264,9 +264,6 @@ function renderNav(role) {
       { category: 'Certificates', items: [
         { name: 'My Certificates', url: 'student/certificates.html' },
         { name: 'My Requests', url: 'student/request.html' }
-      ]},
-      { category: 'Resources', items: [
-        { name: 'Report Guidelines', url: 'report-guidelines.html' }
       ]}
     ]
   };
