@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issue Certificate | Staff | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Issue New Certificate</h1>
+            </div>
+
+            <div class="card" style="max-width: 600px;">
+                <form id="issueForm">
+                    <p style="margin-bottom: 20px; font-size: 0.9rem; color: var(--text-light);">
+                        Note: Certificates issued by Staff must be approved by a University Admin before they become active.
+                    </p>
+                    <div class="form-group">
+                        <label>Select Student</label>
+                        <input type="text" id="issueSearchStudent" placeholder="Filter by name..." onkeyup="filterStudentOptions()" style="margin-bottom:8px; padding:8px; border:1px dashed var(--border-color); font-size:0.85rem;" autocomplete="off">
+                        <select id="certStudent" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Course Type</label>
+                        <select id="certCourse" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Certificate Type</label>
+                        <select id="certType" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Request Date</label>
+                        <input type="date" id="certDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Remarks</label>
+                        <textarea id="certRemarks" placeholder="Optional context..."></textarea>
+                    </div>
+                    <div style="margin-top: 24px;">
+                        <button type="submit" class="btn btn-primary" style="width:100%;">Create Draft Certificate</button>
+                    </div>
+                </form>
+            </div>
+            
+        </main>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRoles(['staff']);
+        let allLocalStudents = [];
+        
+        if (session) {
+            renderNav('staff');
+            loadDropdowns();
+            if(!hasPermission('create_cert')) {
+                const btn = document.querySelector('button[type="submit"]');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerText = 'Permission Denied';
+                    btn.style.opacity = '0.5';
+                }
+            }
+        }
+
+        function loadDropdowns() {
+            allLocalStudents = getAll('students').filter(s => s.universityId === session.universityId);
+            renderStudentOptions(allLocalStudents);
+
+            const courses = getAll('courseTypes').filter(c => c.status === 'active');
+            let cHtml = '';
+            courses.forEach(c => cHtml += `<option value="${c.id}">${c.name}</option>`);
+            document.getElementById('certCourse').innerHTML = cHtml;
+
+            const certTypes = getAll('certTypes').filter(c => c.status === 'active');
+            let ctHtml = '';
+            certTypes.forEach(c => ctHtml += `<option value="${c.id}">${c.name}</option>`);
+            document.getElementById('certType').innerHTML = ctHtml;
+
+            document.getElementById('certType').innerHTML = ctHtml;
+
+            document.getElementById('certDate').value = new Date().toISOString().split('T')[0];
+        }
+
+        function renderStudentOptions(studentArray) {
+            let stuHtml = '<option value="">Select Student...</option>';
+            studentArray.forEach(s => stuHtml += `<option value="${s.id}">${getUserName(s.userId)}</option>`);
+            document.getElementById('certStudent').innerHTML = stuHtml;
+        }
+
+        window.filterStudentOptions = function() {
+            const q = document.getElementById('issueSearchStudent').value.toLowerCase();
+            const filtered = allLocalStudents.filter(s => {
+                return getUserName(s.userId).toLowerCase().includes(q) || s.id.toLowerCase().includes(q);
+            });
+            renderStudentOptions(filtered);
+        }
+
+        document.getElementById('issueForm').onsubmit = function(e) {
+            e.preventDefault();
+            if(!hasPermission('create_cert')) return toast('Permission Denied: Missing create_cert permission.', 'error');
+            
+            const stuId  = document.getElementById('certStudent').value;
+            const ctId   = document.getElementById('certType').value;
+            const stuProfile = getAll('students').find(s => s.id === stuId);
+            const stuUser    = stuProfile ? getById('users', stuProfile.userId) : null;
+            const certType   = getById('certTypes', ctId);
+            
+            const certId = generateCertId(session.universityId, stuUser ? stuUser.name : '', certType ? certType.name : '');
+            const data = {
+                id: certId,
+                studentId: document.getElementById('certStudent').value,
+                courseTypeId: document.getElementById('certCourse').value,
+                certTypeId: document.getElementById('certType').value,
+                universityId: session.universityId,
+                issuedBy: session.userId,
+                issuedAt: document.getElementById('certDate').value,
+                status: 'pending',
+                remarks: document.getElementById('certRemarks').value || ''
+            };
+            
+            create('certificates', data);
+            toast(`Created as pending. ID: ${certId}`, "success");
+            
+            // Reset form
+            document.getElementById('issueForm').reset();
+            document.getElementById('certDate').value = new Date().toISOString().split('T')[0];
+        }
+    </script>
+</body>
+</html>

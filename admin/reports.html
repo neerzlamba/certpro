@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Reports | Admin | CertPro.io</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body class="layout">
+    <div id="sidebarContainer"></div>
+    <div id="toastContainer" class="toast-container"></div>
+    <main class="main-content">
+        <header style="margin-bottom:60px;">
+            <p class="label">Institutional Analytics</p>
+            <h1>College Reports</h1>
+            <p style="color:var(--text-muted);">A complete summary of your college's performance on the CertPro network.</p>
+        </header>
+
+        <!-- Summary Cards -->
+        <div class="stat-grid" id="summaryCards"></div>
+
+        <!-- Certificates by Type -->
+        <div class="card" style="margin-bottom:40px;">
+            <p class="label" style="margin-bottom:30px;">ISSUED CERTIFICATES BY TYPE</p>
+            <div id="certByType" style="display:flex;flex-direction:column;gap:12px;"></div>
+        </div>
+
+        <!-- Recent Requests -->
+        <div class="card" style="padding:0;overflow:hidden;">
+            <p class="label" style="padding:30px 30px 0;">RECENT REQUESTS</p>
+            <table>
+                <thead><tr><th>Student</th><th>Certificate Type</th><th>Date</th><th>Status</th></tr></thead>
+                <tbody id="recentReqs"></tbody>
+            </table>
+        </div>
+    </main>
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/utils.js"></script>
+    <script src="../assets/seed.js"></script>
+    <script>
+        const session = Auth.guardPage('admin');
+        if (session) {
+            if (!Auth.guardPermission('view_reports')) return;
+            Utils.renderSidebar('admin','reports');
+            loadReport();
+        }
+
+        function loadReport() {
+            const certs = Auth.scopedData('certificates');
+            const reqs = Auth.scopedData('requests');
+            const students = Auth.scopedData('users').filter(u => u.role === 'student');
+            const staff = Auth.scopedData('users').filter(u => u.role === 'staff');
+            const courses = DB.getAll('courses');
+            const users = DB.getAll('users');
+
+            // Summary cards
+            const cards = [
+                { label: 'Total Students', value: students.length, color: '#fbbf24' },
+                { label: 'Total Staff', value: staff.length, color: '#60a5fa' },
+                { label: 'Certificates Issued', value: certs.filter(c=>c.status==='issued').length, color: '#34d399' },
+                { label: 'Pending Requests', value: reqs.filter(r=>r.status==='pending').length, color: '#f87171' },
+            ];
+            document.getElementById('summaryCards').innerHTML = cards.map(c => `
+                <div class="card" style="text-align:center;padding:40px 20px;">
+                    <p style="font-size:2.5rem;font-weight:900;color:${c.color};">${c.value}</p>
+                    <p class="label" style="margin-top:10px;">${c.label}</p>
+                </div>
+            `).join('');
+
+            // By type
+            const byType = {};
+            certs.forEach(c => { byType[c.title] = (byType[c.title]||0)+1; });
+            const maxVal = Math.max(...Object.values(byType), 1);
+            document.getElementById('certByType').innerHTML = Object.entries(byType).sort((a,b)=>b[1]-a[1]).map(([name,count])=>`
+                <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                        <span style="font-size:13px;font-weight:600;">${name}</span>
+                        <span style="font-size:12px;color:var(--accent-gold);">${count}</span>
+                    </div>
+                    <div style="background:var(--border);height:6px;">
+                        <div style="background:var(--accent-gold);height:6px;width:${(count/maxVal)*100}%;"></div>
+                    </div>
+                </div>
+            `).join('') || '<p style="opacity:0.4;font-size:14px;">No certificates issued yet.</p>';
+
+            // Recent Requests
+            document.getElementById('recentReqs').innerHTML = reqs.slice(0,10).map(r => {
+                const student = users.find(u=>u.id===r.studentId);
+                const cert = courses.find(c=>c.id===r.courseId);
+                const badge = r.status==='pending'?'badge-pending':r.status==='approved'?'badge-success':'badge-danger';
+                return `<tr>
+                    <td style="font-weight:700;">${student?.name||r.studentId}</td>
+                    <td style="font-size:12px;">${cert?.name||r.courseId}</td>
+                    <td style="font-size:11px;">${Utils.formatDate(r.createdAt)}</td>
+                    <td><span class="badge ${badge}">${r.status.toUpperCase()}</span></td>
+                </tr>`;
+            }).join('') || '<tr><td colspan="4" style="text-align:center;padding:40px;opacity:0.3;">No requests yet</td></tr>';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Types | Admin | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+            <div class="page-header">
+                <h1 class="page-title">Available Course Types</h1>
+                <button class="btn btn-primary" id="btnCreateCourse" style="display:none;" onclick="openCourseModal()">Create Course Type</button>
+            </div>
+
+            <div class="card" style="margin-bottom: 20px; display:flex; gap:10px; align-items:center;">
+                <input type="text" id="searchInput" placeholder="Search course by name..." style="max-width:300px;" oninput="loadData()">
+                <select id="levelFilter" style="max-width:200px;" onchange="loadData()">
+                    <option value="all">All Levels</option>
+                    <option value="bachelor">Bachelor</option>
+                    <option value="master">Master</option>
+                    <option value="diploma">Diploma</option>
+                </select>
+            </div>
+
+            <div class="card">
+                <div id="courseTable"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div id="courseModal" class="modal-overlay">
+        <div class="modal-box" style="max-width:500px;">
+            <div class="modal-hd">
+                <h2 id="modalTitle"><i data-lucide="book" style="width:20px;height:20px;"></i> Create Course Type</h2>
+                <button class="modal-close" onclick="closeModal('courseModal')">✕</button>
+            </div>
+            <div class="modal-bd">
+                <form id="courseForm">
+                    <input type="hidden" id="courseId">
+                    <div class="fg">
+                        <label>Course Name</label>
+                        <input type="text" id="courseName" required placeholder="e.g. Bachelor of Science (BSc)">
+                    </div>
+                    <div class="fg">
+                        <label>Level</label>
+                        <select id="courseLevel" required>
+                            <option value="bachelor">Bachelor</option>
+                            <option value="master">Master</option>
+                            <option value="diploma">Diploma</option>
+                        </select>
+                    </div>
+                    <div class="fg">
+                        <label>Duration</label>
+                        <input type="text" id="courseDuration" required placeholder="e.g. 3 years">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-ft">
+                <button type="button" class="btn" style="border:1px solid var(--border-color);" onclick="closeModal('courseModal')">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="document.getElementById('courseForm').onsubmit({preventDefault:()=>{}})">Save Course Type</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRoles(['admin']);
+        let allCourses = [];
+
+        if (session) {
+            renderNav(session.role);
+            if(hasPermission('manage_courses')) {
+                document.getElementById('btnCreateCourse').style.display = 'block';
+            }
+            loadData();
+        }
+
+        function loadData() {
+            // Admin only sees active courses
+            allCourses = getAll('courseTypes').filter(c => c.status === 'active');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const level = document.getElementById('levelFilter').value;
+            
+            let filtered = allCourses.filter(c => {
+                const matchSearch = c.name.toLowerCase().includes(search);
+                const matchLevel = level === 'all' || c.level === level;
+                return matchSearch && matchLevel;
+            });
+            
+            let headers = ['ID', 'Name', 'Level', 'Duration', 'System Status'];
+            if(hasPermission('manage_courses')) headers.push('Actions');
+            
+            const rows = filtered.map(c => {
+                let row = [
+                    `<span style="font-family:monospace;font-size:0.8rem">${c.id}</span>`,
+                    c.name,
+                    `<span style="text-transform:capitalize;">${c.level}</span>`,
+                    c.duration,
+                    getStatusBadge(c.status)
+                ];
+                if(hasPermission('manage_courses')) {
+                    row.push(
+                        `<button class="btn btn-primary" style="padding:4px 8px;font-size:0.8rem;margin-right:5px;" onclick="openCourseModal('${c.id}')"><i data-lucide="edit-3" style="width:14px;height:14px;"></i></button>` +
+                        `<button class="btn btn-danger" style="padding:4px 8px;font-size:0.8rem;" onclick="deleteCourse('${c.id}')"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>`
+                    );
+                }
+                return row;
+            });
+            renderTable('courseTable', headers, rows);
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('open');
+        }
+        function openModal(id) {
+            document.getElementById(id).classList.add('open');
+        }
+
+        window.deleteCourse = function(id) {
+            if(!hasPermission('manage_courses')) return toast('Permission Denied', 'error');
+            const reason = window.prompt("⚠️ WARNING: Deleting a course may orphan certificates using it.\n\nEnter reason for deletion:");
+            if(reason === null) return;
+            if(!reason.trim()) return toast('Reason required', 'error');
+            remove('courseTypes', id);
+            toast("Course Type deleted", "success");
+            loadData();
+        }
+
+        window.openCourseModal = function(id = null) {
+            if(!hasPermission('manage_courses')) return toast('Permission Denied', 'error');
+            document.getElementById('courseForm').reset();
+            document.getElementById('courseId').value = '';
+            document.getElementById('modalTitle').innerHTML = '<i data-lucide="book" style="width:20px;height:20px;"></i> Create Course Type';
+            
+            if (id) {
+                document.getElementById('modalTitle').innerHTML = '<i data-lucide="edit-3" style="width:20px;height:20px;"></i> Edit Course Type';
+                const c = getById('courseTypes', id);
+                if (c) {
+                    document.getElementById('courseId').value = c.id;
+                    document.getElementById('courseName').value = c.name;
+                    document.getElementById('courseLevel').value = c.level;
+                    document.getElementById('courseDuration').value = c.duration;
+                }
+            }
+            if(window.lucide) window.lucide.createIcons();
+            openModal('courseModal');
+        }
+
+        document.getElementById('courseForm').onsubmit = function(e) {
+            e.preventDefault();
+            if(!hasPermission('manage_courses')) return toast('Permission Denied', 'error');
+            const id = document.getElementById('courseId').value;
+            const data = {
+                name: document.getElementById('courseName').value,
+                level: document.getElementById('courseLevel').value,
+                duration: document.getElementById('courseDuration').value,
+                status: 'active'
+            };
+
+            if (id) {
+                update('courseTypes', id, data);
+                toast("Course Type updated");
+            } else {
+                data.id = generateId('CT');
+                create('courseTypes', data);
+                toast("Course Type created");
+            }
+            closeModal('courseModal');
+            loadData();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Requests | Admin | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Student Action Requests</h1>
+            </div>
+
+            <div class="card" style="margin-bottom: 20px;">
+                <input type="text" id="searchInput" placeholder="Search by student or reason..." style="max-width:300px;" oninput="applyFilters()">
+            </div>
+
+            <div class="card">
+                <div id="requestsTable"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Approve Details Modal -->
+    <div id="approveModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Finalize & Issue Certificate</h2>
+                <button class="modal-close" onclick="closeModal('approveModal')">✕</button>
+            </div>
+            <form id="approveForm">
+                <input type="hidden" id="reqIdToApprove">
+                <p style="margin-bottom: 16px; font-size:0.9rem; color:var(--text-light);">Select the certificate type to be automatically issued upon approval.</p>
+                <div class="form-group">
+                    <label>Edit Request Reason (Optional)</label>
+                    <textarea id="editReasonApp" placeholder="Change student's listed reason..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Certificate Type to Issue</label>
+                    <select id="approveCertType" required></select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" style="color:var(--text-main); border:1px solid #ccc; background:#fff" onclick="closeModal('approveModal')">Cancel</button>
+                    <button type="submit" class="btn btn-success">Update, Approve & Issue</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reject Modal -->
+    <div id="rejectModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Reject Request</h2>
+                <button class="modal-close" onclick="closeModal('rejectModal')">✕</button>
+            </div>
+            <form id="rejectForm">
+                <input type="hidden" id="reqIdToReject">
+                <div class="form-group">
+                    <label>Edit Request Reason (Optional)</label>
+                    <textarea id="editReasonRej" placeholder="Change student's listed reason..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Admin Remarks (Required)</label>
+                    <textarea id="adminRemarks" required placeholder="Explain why this request is being rejected..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" style="color:var(--text-main); border:1px solid #ccc; background:#fff" onclick="closeModal('rejectModal')">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Save & Reject</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Remark Modal -->
+    <div id="remarkModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Internal Staff Remarks</h2>
+                <button class="modal-close" onclick="closeModal('remarkModal')">✕</button>
+            </div>
+            <form id="remarkForm">
+                <input type="hidden" id="reqIdToRemark">
+                <div id="remarkContext" style="background:var(--bg-secondary); padding:12px; border-left:4px solid var(--accent-color); margin-bottom:20px; font-size:0.85rem;">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="form-group">
+                    <label>Update Internal Remarks</label>
+                    <textarea id="internalRemarksInput" required placeholder="Add notes for other staff/admins..."></textarea>
+                </div>
+                <p style="font-size:0.8rem; color:var(--text-light);">This note is only visible to university staff and admins.</p>
+                <div class="modal-footer">
+                    <button type="button" class="btn" style="color:var(--text-main); border:1px solid #ccc; background:#fff" onclick="closeModal('remarkModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Remarks</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRoles(['admin', 'staff', 'superadmin']);
+        let myRequests = [];
+
+        if (session) {
+            renderNav(session.role);
+            loadDropdowns();
+            loadData();
+            logAction('VIEW_REQUESTS', 'ADMIN', 'User opened Student Action Requests ledger');
+        }
+
+        function loadDropdowns() {
+            const certTypes = getAll('certTypes').filter(c => c.status === 'active');
+            let ctHtml = '';
+            certTypes.forEach(c => ctHtml += `<option value="${c.id}">${c.name}</option>`);
+            document.getElementById('approveCertType').innerHTML = ctHtml;
+        }
+
+        function loadData() {
+            const allReqs = getAll('requests');
+            const isSA = session.role === 'superadmin';
+            
+            myRequests = allReqs.filter(r => 
+                (isSA || r.universityId === session.universityId) && 
+                (r.status === 'forwarded' || r.status === 'pending')
+            );
+            myRequests.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            let filtered = myRequests.filter(r => {
+                const stu = getById('students', r.studentId);
+                const sName = stu ? getUserName(stu.userId).toLowerCase() : '';
+                return sName.includes(search) || r.reason.toLowerCase().includes(search);
+            });
+
+            const headers = ['Tracking ID', 'Student', 'Req Course', 'Reason', 'Internal Remarks', 'Status', 'Actions'];
+            const rows = filtered.map(r => {
+                const s = getById('students', r.studentId);
+                const stuName = s ? getUserName(s.userId) : 'Unknown';
+                
+                let actionHtml = `<div style="display:flex;gap:4px;">`;
+                if(hasPermission('approve_request')) {
+                    actionHtml += `<button class="btn btn-success" style="padding:4px 8px;font-size:0.75rem;" onclick="openApproveModal('${r.id}')"><i data-lucide="check" style="width:12px;height:12px;"></i></button>`;
+                }
+                if(hasPermission('add_remarks')) {
+                    actionHtml += `<button class="btn" style="padding:4px 8px;font-size:0.75rem;background:var(--bg-tertiary);border:1px solid var(--border-color);" onclick="openRemarkModal('${r.id}')" title="Add Remarks"><i data-lucide="message-square" style="width:12px;height:12px;"></i></button>`;
+                }
+                if(hasPermission('reject_request')) {
+                    actionHtml += `<button class="btn btn-danger" style="padding:4px 8px;font-size:0.75rem;" onclick="openRejectModal('${r.id}')"><i data-lucide="x" style="width:12px;height:12px;"></i></button>`;
+                }
+                actionHtml += `</div>`;
+                
+                return [
+                    `<div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-family:monospace;font-size:0.8rem">${r.id}</span>
+                        <button class="btn" style="padding:2px 6px;font-size:0.7rem;background:var(--bg-secondary);color:var(--text-primary);" title="Copy ID" onclick="copyText('${r.id}')"><i data-lucide="copy" style="width:10px;height:10px;"></i></button>
+                    </div>`,
+                    stuName,
+                    getCourseTypeName(r.courseTypeId),
+                    `<span title="${r.reason}">${r.reason.substring(0, 30)}${r.reason.length > 30 ? '...' : ''}</span>`,
+                    `<span title="${r.staffRemarks || 'No remarks'}">${(r.staffRemarks || '-').substring(0,25)}</span>`,
+                    getStatusBadge(r.status),
+                    actionHtml
+                ];
+            });
+            renderTable('requestsTable', headers, rows);
+            if(window.lucide) window.lucide.createIcons();
+        }
+
+        window.openRemarkModal = function(id) {
+            if(!hasPermission('add_remarks')) return toast('Permission Denied', 'error');
+            const req = getById('requests', id);
+            if(req) {
+                const s = getById('students', req.studentId);
+                const sName = s ? getUserName(s.userId) : 'Unknown Student';
+                const cName = getCourseTypeName(req.courseTypeId);
+                
+                document.getElementById('remarkContext').innerHTML = `
+                    <p style="margin-bottom:8px;"><strong>Student:</strong> ${sName}</p>
+                    <p style="margin-bottom:8px;"><strong>Requested For:</strong> ${cName}</p>
+                    <p style="font-style:italic; color:var(--text-light);">"${req.reason || '(No reason specified)'}"</p>
+                `;
+                
+                document.getElementById('reqIdToRemark').value = id;
+                document.getElementById('internalRemarksInput').value = req.staffRemarks || '';
+                openModal('remarkModal');
+            }
+        }
+
+        document.getElementById('remarkForm').onsubmit = function(e) {
+            e.preventDefault();
+            const rId = document.getElementById('reqIdToRemark').value;
+            const remarks = document.getElementById('internalRemarksInput').value;
+            update('requests', rId, { staffRemarks: remarks });
+            logAction('ADD_REMARK', rId, `Updated internal staff remarks for request`);
+            toast("Internal remarks updated", "success");
+            closeModal('remarkModal');
+            loadData();
+        }
+
+        window.openApproveModal = function(id) {
+            if(!hasPermission('approve_request')) return toast('Permission Denied', 'error');
+            document.getElementById('approveForm').reset();
+            const req = getById('requests', id);
+            if(req) {
+                document.getElementById('editReasonApp').value = req.reason;
+            }
+            document.getElementById('reqIdToApprove').value = id;
+            openModal('approveModal');
+        }
+
+        document.getElementById('approveForm').onsubmit = function(e) {
+            e.preventDefault();
+            const rId = document.getElementById('reqIdToApprove').value;
+            const certTypeId = document.getElementById('approveCertType').value;
+            const updatedReason = document.getElementById('editReasonApp').value;
+            
+            const req = getById('requests', rId);
+            if (!req) return;
+
+            // 1. Mark request as approved and update reason
+            update('requests', rId, { status: 'approved', reason: updatedReason });
+
+            // 2. Auto-create certificate matching request
+            const certData = {
+                id: generateId('CERT'),
+                studentId: req.studentId,
+                courseTypeId: req.courseTypeId,
+                certTypeId: certTypeId,
+                universityId: req.universityId,
+                issuedBy: session.userId,
+                issuedAt: new Date().toISOString().split('T')[0],
+                status: 'issued',
+                remarks: 'Auto-issued from approved request'
+            };
+            create('certificates', certData);
+            logAction('APPROVE_REQUEST', rId, `Request approved and certificate ${certData.id} automatically issued.`);
+
+            toast("Request Approved & Certificate Issued", "success");
+            closeModal('approveModal');
+            loadData();
+        }
+
+        window.openRejectModal = function(id) {
+            if(!hasPermission('reject_request')) return toast('Permission Denied', 'error');
+            document.getElementById('rejectForm').reset();
+            const req = getById('requests', id);
+            if(req) {
+                document.getElementById('editReasonRej').value = req.reason;
+            }
+            document.getElementById('reqIdToReject').value = id;
+            openModal('rejectModal');
+        }
+
+        document.getElementById('rejectForm').onsubmit = function(e) {
+            e.preventDefault();
+            const rId = document.getElementById('reqIdToReject').value;
+            const remarks = document.getElementById('adminRemarks').value;
+            const updatedReason = document.getElementById('editReasonRej').value;
+            
+            update('requests', rId, { status: 'rejected', adminRemarks: remarks, reason: updatedReason });
+            logAction('REJECT_REQUEST', rId, `Request rejected. Reason update: ${updatedReason}`);
+            
+            toast("Request Rejected", "success");
+            closeModal('rejectModal');
+            loadData();
+        }
+    </script>
+</body>
+</html>

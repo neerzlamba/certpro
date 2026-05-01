@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificates | Superadmin | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Global Master Certificates Database</h1>
+            </div>
+
+            <div class="card" style="margin-bottom: 20px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <input type="text" id="searchInput" placeholder="Search ID or date..." style="max-width:250px;" oninput="applyFilters()">
+                <select id="statusFilter" style="max-width:200px;" onchange="applyFilters()">
+                    <option value="all">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="issued">Issued</option>
+                    <option value="revoked">Revoked</option>
+                </select>
+                <select id="uniFilter" style="max-width:250px;" onchange="applyFilters()">
+                    <!-- Filled by JS -->
+                </select>
+                <div style="flex-grow:1; text-align:right;">
+                    <button class="btn btn-primary" onclick="window.openIssueModal()">+ Issue Cert</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div id="certsTable"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- View Modal -->
+    <div id="viewModal" class="modal-overlay">
+        <div class="modal-content" style="max-width:600px;">
+            <div class="modal-header">
+                <h2>Certificate Details</h2>
+                <button class="modal-close" onclick="closeModal('viewModal')">✕</button>
+            </div>
+            <div id="viewContent" style="line-height:2;">
+                <!-- Populated by JS -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="closeModal('viewModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Issue Modal -->
+    <div id="issueModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Direct Universal Issuance</h2>
+                <button class="modal-close" onclick="closeModal('issueModal')">✕</button>
+            </div>
+            <form id="issueForm">
+                <div class="form-group">
+                    <label>Target Student Identity</label>
+                    <input type="text" id="issueSearchStudent" placeholder="Filter by name or ID..." onkeyup="filterStudentOptions()" style="margin-bottom:8px; padding:8px; border:1px dashed var(--border-color); font-size:0.85rem;" autocomplete="off">
+                    <select id="issueStudentId" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Assigned Program</label>
+                    <select id="issueCourseId" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Certificate Format</label>
+                    <select id="issueCertTypeId" required></select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" style="color:var(--text-main); border:1px solid #ccc; background:#fff" onclick="closeModal('issueModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Mint Document</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRole('superadmin');
+        let allCerts = [];
+        let allActiveStudents = [];
+
+        if (session) {
+            renderNav('superadmin');
+            loadFilters();
+            loadData();
+        }
+
+        function loadFilters() {
+            const unis = getAll('universities');
+            let html = '<option value="all">All Universities</option>';
+            unis.forEach(u => html += `<option value="${u.id}">${u.name}</option>`);
+            document.getElementById('uniFilter').innerHTML = html;
+
+            // Load issue dropdowns
+            allActiveStudents = getAll('students').filter(s => s.status === 'active');
+            renderStudentOptions(allActiveStudents);
+
+            const courses = getAll('courseTypes').filter(c => c.status === 'active');
+            let cHtml = '<option value="">Select Course...</option>';
+            courses.forEach(c => cHtml += `<option value="${c.id}">${c.name}</option>`);
+            document.getElementById('issueCourseId').innerHTML = cHtml;
+
+            const certs = getAll('certTypes').filter(c => c.status === 'active');
+            let certHtml = '<option value="">Select Cert Type...</option>';
+            certs.forEach(c => certHtml += `<option value="${c.id}">${c.name}</option>`);
+            document.getElementById('issueCertTypeId').innerHTML = certHtml;
+        }
+
+        function loadData() {
+            allCerts = getAll('certificates');
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const status = document.getElementById('statusFilter').value;
+            const uniId = document.getElementById('uniFilter').value;
+
+            let filtered = allCerts.filter(c => {
+                const matchSearch = c.id.toLowerCase().includes(search) || c.issuedAt.includes(search);
+                const matchStatus = status === 'all' || c.status === status;
+                const matchUni = uniId === 'all' || c.universityId === uniId;
+                return matchSearch && matchStatus && matchUni;
+            });
+
+            // Sort newest first
+            filtered.sort((a,b) => new Date(b.issuedAt) - new Date(a.issuedAt));
+            renderCerts(filtered);
+        }
+
+        function renderCerts(certs) {
+            const headers = ['Certificate ID', 'Student', 'Course Format', 'Type', 'University', 'Date', 'Generated By', 'Status', 'Actions'];
+            const rows = certs.map(c => {
+                const s = getById('students', c.studentId);
+                const stuName = s ? getUserName(s.userId) : 'Unknown';
+                const staffName = getUserName(c.issuedBy);
+                
+                let actionHtml = `<button class="btn btn-primary" style="padding:4px 8px;font-size:0.8rem;margin-right:5px;" onclick="viewCert('${c.id}')">View</button>`;
+                
+                if (c.status === 'pending') {
+                    actionHtml += `<button class="btn btn-success" style="padding:4px 8px;font-size:0.8rem;margin-right:5px;" onclick="updateStatus('${c.id}', 'approve')">Approve</button>`;
+                }
+                
+                if (c.status === 'issued') {
+                    actionHtml += `<button class="btn" style="padding:4px 8px;font-size:0.8rem;background:#f57c00;color:#fff;margin-right:5px;" onclick="updateStatus('${c.id}', 'revoke')">Revoke</button>`;
+                }
+                
+                actionHtml += `<button class="btn btn-danger" style="padding:4px 8px;font-size:0.8rem;" onclick="deleteCert('${c.id}')">Del</button>`;
+                
+                return [
+                    `<div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-family:monospace;font-size:0.8rem">${c.id}</span>
+                        <button class="btn" style="padding:2px 6px;font-size:0.7rem;background:var(--bg-secondary);color:var(--text-primary);" title="Copy ID" onclick="copyText('${c.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+                    </div>`,
+                    stuName,
+                    getCourseTypeName(c.courseTypeId),
+                    getCertTypeName(c.certTypeId),
+                    getUniversityName(c.universityId),
+                    formatDate(c.issuedAt),
+                    staffName,
+                    getStatusBadge(c.status),
+                    actionHtml
+                ];
+            });
+            renderTable('certsTable', headers, rows);
+        }
+
+        window.updateStatus = function(id, action) {
+            if (action === 'approve') {
+                update('certificates', id, { status: 'issued' });
+                toast("Certificate Approved & Issued", "success");
+            } else if (action === 'revoke') {
+                const remarks = prompt("Please enter the reason for revoking this certificate:");
+                if (remarks !== null && remarks.trim() !== '') {
+                    update('certificates', id, { status: 'revoked', remarks: remarks });
+                    toast("Certificate Revoked", "success");
+                } else if (remarks !== null) {
+                    toast("You must provide a reason", "error");
+                    return;
+                }
+            }
+            loadData();
+        }
+
+        window.deleteCert = function(id) {
+            const reason = prompt("Please enter the reason for deleting this permanent ledger record:");
+            if (!reason) return;
+
+            confirmDelete(`Delete this certificate permanently? Reason: ${reason}`, () => {
+                remove('certificates', id);
+                toast("Certificate logically deleted", "success");
+                loadData();
+            });
+        }
+
+        window.viewCert = function(id) {
+            const c = getById('certificates', id);
+            if (!c) return;
+            const stu = getById('students', c.studentId);
+            const content = document.getElementById('viewContent');
+            content.innerHTML = `
+                <p><strong>Certificate ID:</strong> ${c.id}</p>
+                <p><strong>Student Name:</strong> ${stu ? getUserName(stu.userId) : 'Unknown'}</p>
+                <p><strong>Course Type:</strong> ${getCourseTypeName(c.courseTypeId)}</p>
+                <p><strong>Certificate Type:</strong> ${getCertTypeName(c.certTypeId)}</p>
+                <p><strong>University:</strong> ${getUniversityName(c.universityId)}</p>
+                <p><strong>Issued By:</strong> ${getUserName(c.issuedBy)}</p>
+                <p><strong>Issued Date:</strong> ${formatDate(c.issuedAt)}</p>
+                <p><strong>Current Status:</strong> ${getStatusBadge(c.status)}</p>
+            `;
+            openModal('viewModal');
+        }
+
+        function renderStudentOptions(studentArray) {
+            let stuHtml = '<option value="">Select Student...</option>';
+            studentArray.forEach(s => stuHtml += `<option value="${s.id}">${getUserName(s.userId)} (${s.id})</option>`);
+            document.getElementById('issueStudentId').innerHTML = stuHtml;
+        }
+
+        window.filterStudentOptions = function() {
+            const q = document.getElementById('issueSearchStudent').value.toLowerCase();
+            const filtered = allActiveStudents.filter(s => {
+                return getUserName(s.userId).toLowerCase().includes(q) || s.id.toLowerCase().includes(q);
+            });
+            renderStudentOptions(filtered);
+        }
+
+        window.openIssueModal = function() {
+            document.getElementById('issueForm').reset();
+            openModal('issueModal');
+        }
+
+        document.getElementById('issueForm').onsubmit = function(e) {
+            e.preventDefault();
+            const sId = document.getElementById('issueStudentId').value;
+            const cId = document.getElementById('issueCourseId').value;
+            const ctId = document.getElementById('issueCertTypeId').value;
+
+            const stu = getById('students', sId);
+            if(!stu) return;
+
+            const certData = {
+                id: generateId('CERT'),
+                studentId: sId,
+                courseTypeId: cId,
+                certTypeId: ctId,
+                universityId: stu.universityId,
+                issuedBy: session.userId,
+                issuedAt: new Date().toISOString().split('T')[0],
+                status: 'issued',
+                remarks: 'Direct Mint via Superadmin'
+            };
+            create('certificates', certData);
+            
+            toast("Certificate Successfully Minted", "success");
+            closeModal('issueModal');
+            loadData();
+        }
+    </script>
+</body>
+</html>

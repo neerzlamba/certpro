@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Requests | Superadmin | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Global Document Requests</h1>
+            </div>
+
+            <div class="card" style="margin-bottom: 20px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <input type="text" id="searchInput" placeholder="Search by student or reason..." style="max-width:300px;" oninput="applyFilters()">
+                <select id="statusFilter" style="max-width:200px;" onchange="applyFilters()">
+                    <option value="all">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="forwarded">Forwarded</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+                <select id="uniFilter" style="max-width:250px;" onchange="applyFilters()">
+                    <!-- Filled by JS -->
+                </select>
+            </div>
+
+            <div class="card">
+                <div id="requestsTable"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Approve Details Modal -->
+    <div id="approveModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Finalize & Issue Certificate</h2>
+                <button class="modal-close" onclick="closeModal('approveModal')">✕</button>
+            </div>
+            <form id="approveForm">
+                <input type="hidden" id="reqIdToApprove">
+                <p style="margin-bottom: 16px; font-size:0.9rem; color:var(--text-light);">Select the certificate type to be automatically issued upon approval.</p>
+                <div class="form-group">
+                    <label>Edit Request Reason (Optional)</label>
+                    <textarea id="editReasonApp" placeholder="Change student's listed reason..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Certificate Type to Issue</label>
+                    <select id="approveCertType" required></select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" style="color:var(--text-main); border:1px solid #ccc; background:#fff" onclick="closeModal('approveModal')">Cancel</button>
+                    <button type="submit" class="btn btn-success">Update, Approve & Issue</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reject Modal -->
+    <div id="rejectModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Reject Request</h2>
+                <button class="modal-close" onclick="closeModal('rejectModal')">✕</button>
+            </div>
+            <form id="rejectForm">
+                <input type="hidden" id="reqIdToReject">
+                <div class="form-group">
+                    <label>Edit Request Reason (Optional)</label>
+                    <textarea id="editReasonRej" placeholder="Change student's listed reason..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Superadmin Remarks (Required)</label>
+                    <textarea id="adminRemarks" required placeholder="Explain why this request is being rejected..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" style="color:var(--text-main); border:1px solid #ccc; background:#fff" onclick="closeModal('rejectModal')">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Save & Reject</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRole('superadmin');
+        let allRequests = [];
+
+        if (session) {
+            renderNav('superadmin');
+            loadDropdowns();
+            loadData();
+        }
+
+        function loadDropdowns() {
+            const certTypes = getAll('certTypes').filter(c => c.status === 'active');
+            let ctHtml = '';
+            certTypes.forEach(c => ctHtml += `<option value="${c.id}">${c.name}</option>`);
+            document.getElementById('approveCertType').innerHTML = ctHtml;
+
+            const unis = getAll('universities');
+            let html = '<option value="all">All Universities</option>';
+            unis.forEach(u => html += `<option value="${u.id}">${u.name}</option>`);
+            document.getElementById('uniFilter').innerHTML = html;
+        }
+
+        function loadData() {
+            allRequests = getAll('requests');
+            allRequests.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const status = document.getElementById('statusFilter').value;
+            const uniId = document.getElementById('uniFilter').value;
+
+            let filtered = allRequests.filter(r => {
+                const stu = getById('students', r.studentId);
+                const sName = stu ? getUserName(stu.userId).toLowerCase() : '';
+                
+                const matchSearch = sName.includes(search) || r.reason.toLowerCase().includes(search);
+                const matchStatus = status === 'all' || r.status === status;
+                const matchUni = uniId === 'all' || r.universityId === uniId;
+
+                return matchSearch && matchStatus && matchUni;
+            });
+
+            const headers = ['Tracking ID', 'Student', 'University', 'Course', 'Reason', 'Staff Notes', 'Date', 'Status', 'Actions'];
+            const rows = filtered.map(r => {
+                const s = getById('students', r.studentId);
+                const stuName = s ? getUserName(s.userId) : 'Unknown';
+                
+                let actionHtml = '';
+                if (r.status === 'pending' || r.status === 'forwarded') {
+                    actionHtml = `<button class="btn btn-success" style="padding:4px 8px;font-size:0.8rem;margin-right:5px;" onclick="openApproveModal('${r.id}')">Approve</button>` +
+                                 `<button class="btn btn-danger" style="padding:4px 8px;font-size:0.8rem;" onclick="openRejectModal('${r.id}')">Reject</button>`;
+                }
+                
+                return [
+                    `<div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-family:monospace;font-size:0.8rem">${r.id}</span>
+                        <button class="btn" style="padding:2px 6px;font-size:0.7rem;background:var(--bg-secondary);color:var(--text-primary);" title="Copy ID" onclick="copyText('${r.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+                    </div>`,
+                    stuName,
+                    getUniversityName(r.universityId),
+                    getCourseTypeName(r.courseTypeId),
+                    `<span title="${r.reason}">${r.reason.substring(0, 20)}${r.reason.length > 20 ? '...' : ''}</span>`,
+                    r.staffRemarks || '-',
+                    formatDate(r.createdAt),
+                    getStatusBadge(r.status),
+                    actionHtml
+                ];
+            });
+            renderTable('requestsTable', headers, rows);
+        }
+
+        window.openApproveModal = function(id) {
+            document.getElementById('approveForm').reset();
+            const req = getById('requests', id);
+            if(req) {
+                document.getElementById('editReasonApp').value = req.reason;
+            }
+            document.getElementById('reqIdToApprove').value = id;
+            openModal('approveModal');
+        }
+
+        document.getElementById('approveForm').onsubmit = function(e) {
+            e.preventDefault();
+            const rId = document.getElementById('reqIdToApprove').value;
+            const certTypeId = document.getElementById('approveCertType').value;
+            const updatedReason = document.getElementById('editReasonApp').value;
+            
+            const req = getById('requests', rId);
+            if (!req) return;
+
+            // 1. Mark request as approved
+            update('requests', rId, { status: 'approved', reason: updatedReason });
+
+            // 2. Auto-create certificate matching request
+            const certData = {
+                id: generateId('CERT'),
+                studentId: req.studentId,
+                courseTypeId: req.courseTypeId,
+                certTypeId: certTypeId,
+                universityId: req.universityId,
+                issuedBy: session.userId,
+                issuedAt: new Date().toISOString().split('T')[0],
+                status: 'issued', // Directly issued
+                remarks: 'Auto-issued via Superadmin from approved request'
+            };
+            create('certificates', certData);
+
+            toast("Request Approved & Certificate Issued", "success");
+            closeModal('approveModal');
+            loadData();
+        }
+
+        window.openRejectModal = function(id) {
+            document.getElementById('rejectForm').reset();
+            const req = getById('requests', id);
+            if(req) {
+                document.getElementById('editReasonRej').value = req.reason;
+            }
+            document.getElementById('reqIdToReject').value = id;
+            openModal('rejectModal');
+        }
+
+        document.getElementById('rejectForm').onsubmit = function(e) {
+            e.preventDefault();
+            const rId = document.getElementById('reqIdToReject').value;
+            const remarks = document.getElementById('adminRemarks').value;
+            const updatedReason = document.getElementById('editReasonRej').value;
+            
+            update('requests', rId, { status: 'rejected', adminRemarks: remarks, reason: updatedReason });
+            
+            toast("Request Rejected", "success");
+            closeModal('rejectModal');
+            loadData();
+        }
+    </script>
+</body>
+</html>

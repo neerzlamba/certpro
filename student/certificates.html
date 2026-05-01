@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Certificates | Student | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">My Issued Certificates</h1>
+            </div>
+
+            <div class="card">
+                <div id="certsTable"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- View Modal -->
+    <div id="viewModal" class="modal-overlay">
+        <div class="modal-content" id="certBoxWrapper" style="max-width:700px;">
+            <div class="modal-header">
+                <h2>Certificate Document</h2>
+                <button class="modal-close" onclick="closeModal('viewModal')">✕</button>
+            </div>
+            
+            <div id="certContainer" style="background:#fff; border: 12px solid #000; padding:40px; text-align:center; position:relative; min-height:400px; display:flex; flex-direction:column; justify-content:center;">
+                <h1 style="font-family:serif; font-size:2.5rem; margin-bottom:10px; color:var(--text-main)" id="cUni">University Name</h1>
+                <h3 style="font-family:serif; font-weight:normal; color:#555; margin-bottom:30px;" id="cType">Certificate Type</h3>
+                
+                <p style="font-size:1.1rem; margin-bottom:10px;">This is to certify that</p>
+                <h2 style="font-size:2rem; font-family:serif; margin-bottom:10px; text-decoration:underline;" id="cStudent">Student Name</h2>
+                
+                <p style="font-size:1.1rem; margin-bottom:10px;">has successfully completed the requirements for</p>
+                <h2 style="font-size:1.5rem; font-family:serif; margin-bottom:40px;" id="cCourse">Course Name</h2>
+                
+                <div style="display:flex; justify-content:space-between; margin-top:30px; border-top:1px solid #ccc; padding-top:10px;">
+                    <div style="text-align:left;">
+                        <p style="font-size:0.8rem; color:#777;">Certificate ID</p>
+                        <strong id="cId" style="font-family:monospace;">---</strong>
+                    </div>
+                    <div style="text-align:right;">
+                        <p style="font-size:0.8rem; color:#777;">Issue Date</p>
+                        <strong id="cDate">---</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="justify-content:space-between; margin-top:20px;">
+                <div id="verifyLinkContainer" style="display:flex; gap:10px; align-items:center; flex:1; max-width:400px; display:none;">
+                    <input type="text" id="verifyUrlInput" readonly style="font-size:0.8rem; flex:1;">
+                    <button class="btn btn-primary" onclick="copyVerifyUrl()">Copy</button>
+                </div>
+                <button type="button" class="btn" style="border:1px solid #ccc;" onclick="closeModal('viewModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRoles(['student']);
+        let studentRecord = null;
+        let myCerts = [];
+
+        if (session) {
+            renderNav('student');
+            loadData();
+        }
+
+        function loadData() {
+            studentRecord = getAll('students').find(s => s.userId === session.userId);
+            if (!studentRecord) return;
+
+            myCerts = getAll('certificates').filter(c => c.studentId === studentRecord.id && c.status === 'issued');
+            myCerts.sort((a,b) => new Date(b.issuedAt) - new Date(a.issuedAt));
+            
+            const headers = ['Cert ID', 'Course', 'Cert Type', 'Issued Date', 'Actions'];
+            const rows = myCerts.map(c => {
+                const url = window.location.origin + '/portal.html?tab=verify&id=' + c.id;
+                return [
+                    `<span style="font-family:monospace;font-size:0.8rem">${c.id}</span>`,
+                    getCourseTypeName(c.courseTypeId),
+                    getCertTypeName(c.certTypeId),
+                    formatDate(c.issuedAt),
+                    `<button class="btn btn-primary" style="padding:4px 8px;font-size:0.8rem;margin-right:5px;" onclick="viewCert('${c.id}')">View</button>` +
+                    `<button class="btn btn-success" style="padding:4px 8px;font-size:0.8rem;" onclick="showVerifyUrl('${url}')">Verify Link</button>`
+                ];
+            });
+            renderTable('certsTable', headers, rows);
+        }
+
+        window.viewCert = function(id) {
+            const c = getById('certificates', id);
+            if (!c) return;
+
+            const cType = getById('certTypes', c.certTypeId);
+            if (cType) {
+                document.getElementById('certContainer').style.borderColor = cType.borderColor;
+            }
+
+            document.getElementById('cUni').innerText = getUniversityName(c.universityId);
+            document.getElementById('cType').innerText = getCertTypeName(c.certTypeId);
+            document.getElementById('cStudent').innerText = getUserName(session.userId);
+            document.getElementById('cCourse').innerText = getCourseTypeName(c.courseTypeId);
+            document.getElementById('cId').innerText = c.id;
+            document.getElementById('cDate').innerText = formatDate(c.issuedAt);
+
+            document.getElementById('verifyLinkContainer').style.display = 'none';
+            openModal('viewModal');
+        }
+
+        window.showVerifyUrl = function(url) {
+            const input = document.getElementById('verifyUrlInput');
+            input.value = url;
+            document.getElementById('verifyLinkContainer').style.display = 'flex';
+            openModal('viewModal');
+        }
+
+        window.copyVerifyUrl = function() {
+            const input = document.getElementById('verifyUrlInput');
+            input.select();
+            document.execCommand('copy');
+            toast('Verify URL copied to clipboard');
+        }
+    </script>
+</body>
+</html>

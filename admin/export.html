@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Reports | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+    <style>
+        .export-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 28px 24px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        .export-card:hover { border-color: var(--accent-color); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+        .export-card i { color: var(--accent-color); margin-bottom: 16px; }
+        .export-card h3 { font-size: 1.05rem; margin-bottom: 6px; }
+        .export-card p { font-size: 0.85rem; color: var(--text-light); margin-bottom: 18px; }
+        .export-card .count-badge { font-size: 1.8rem; font-weight: 700; color: var(--accent-color); margin-bottom: 4px; }
+        .export-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-bottom: 32px; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Export Reports</h1>
+                <p style="font-size:0.85rem;color:var(--text-light);align-self:center;">Download system data as CSV files</p>
+            </div>
+
+            <div class="card" style="margin-top:32px; border:2px dashed var(--border-color); background:rgba(0,0,0,0.02);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h3 style="margin-bottom:4px;">System-Wide Backup & Restore</h3>
+                        <p style="font-size:0.85rem; color:var(--text-light);">Export the entire database as a single JSON file or restore from a previous backup.</p>
+                    </div>
+                    <div style="display:flex; gap:12px;">
+                        <button class="btn btn-primary" onclick="universalExport()">
+                            <i data-lucide="shield-check" style="width:16px;height:16px;margin-right:6px;vertical-align:middle;"></i> Full System Export (JSON)
+                        </button>
+                        <button class="btn" style="border:1px solid var(--border-color);" onclick="document.getElementById('importFile').click()">
+                            <i data-lucide="upload-cloud" style="width:16px;height:16px;margin-right:6px;vertical-align:middle;"></i> Restore Backup
+                        </button>
+                        <input type="file" id="importFile" style="display:none;" onchange="universalImport(event)" accept=".json">
+                    </div>
+                </div>
+            </div>
+
+            <div class="export-grid" id="exportGrid">
+                <!-- Populated by JS -->
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom:16px;font-size:0.95rem;display:flex;align-items:center;gap:8px;">
+                    <i data-lucide="history" style="width:16px;height:16px;"></i> Recent Export History
+                </h3>
+                <div id="exportHistoryTable"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRoles(['admin', 'staff', 'superadmin']);
+        if (session && !hasPermission('export_data')) {
+            toast('You do not have permission to export data', 'error');
+            setTimeout(() => window.history.back(), 2000);
+        }
+
+        const isSA = session && session.role === 'superadmin';
+
+        // Helper to escape CSV values correctly
+        function esc(val) {
+            if (val === null || val === undefined) return '""';
+            const str = String(val).replace(/"/g, '""'); // CSV double-quote escaping
+            return `"${str}"`;
+        }
+
+        const EXPORT_TYPES = [
+            {
+                key: 'certificates', icon: 'award', label: 'Certificates',
+                desc: 'All certificate records with student, course, date, status',
+                color: '#1565c0',
+                countFn: () => getAll('certificates').filter(c => isSA || c.universityId === session.universityId).length
+            },
+            {
+                key: 'requests', icon: 'inbox', label: 'Student Requests',
+                desc: 'All certificate requests with status and remarks',
+                color: '#6a1b9a',
+                countFn: () => getAll('requests').filter(r => isSA || r.universityId === session.universityId).length
+            },
+            {
+                key: 'students', icon: 'graduation-cap', label: 'Students',
+                desc: 'Student directory with roll numbers and enrollment info',
+                color: '#2e7d32',
+                countFn: () => getAll('students').filter(s => isSA || s.universityId === session.universityId).length
+            },
+            {
+                key: 'staff', icon: 'briefcase', label: 'Staff & Admins',
+                desc: 'Staff roster with employee IDs, designations, departments',
+                color: '#e65100',
+                countFn: () => getAll('staff').filter(s => isSA || s.universityId === session.universityId).length
+            },
+            {
+                key: 'notifications', icon: 'bell', label: 'Notifications',
+                desc: 'History of all sent notifications and broadcasts',
+                color: '#00838f',
+                countFn: () => getAll('notifications').filter(n => isSA || n.universityId === session.universityId).length
+            },
+            {
+                key: 'logs', icon: 'activity', label: 'Audit Logs',
+                desc: 'Complete activity trail of all admin actions',
+                color: '#37474f',
+                countFn: () => getAll('logs').filter(l => isSA || l.universityId === session.universityId).length
+            }
+        ];
+
+        function buildExportCards() {
+            const grid = document.getElementById('exportGrid');
+            if (!grid) return;
+            grid.innerHTML = EXPORT_TYPES.map(t => `
+                <div class="export-card" onclick="doExport('${t.key}')">
+                    <i data-lucide="${t.icon}" style="width:36px;height:36px;color:${t.color};margin-bottom:14px;"></i>
+                    <div class="count-badge" style="color:${t.color};">${t.countFn()}</div>
+                    <h3>${t.label}</h3>
+                    <p>${t.desc}</p>
+                    <button class="btn btn-primary" style="width:100%;pointer-events:none;">
+                        <i data-lucide="download" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;"></i> Download CSV
+                    </button>
+                </div>
+            `).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function loadHistory() {
+            const logs = getAll('logs');
+            const exportLogs = logs.filter(l => 
+                (isSA || l.universityId === session.universityId) && 
+                (l.action === 'EXPORT_DATA' || l.action === 'SYSTEM_BACKUP')
+            ).slice(0, 20);
+
+            const container = document.getElementById('exportHistoryTable');
+            if (!container) return;
+            if (exportLogs.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-light);font-size:0.9rem;padding:12px 0;text-align:center;">No export history yet. Download your first report above.</p>';
+                return;
+            }
+
+            const headers = ['Date & Time', 'Action', 'Format', 'Exported By', 'Details'];
+            const rows = exportLogs.map(l => [
+                formatDate(l.timestamp),
+                `<span class="badge" style="background:var(--bg-tertiary);color:var(--text-primary); text-transform:uppercase;">${l.action || '-'}</span>`,
+                `<span class="badge">${l.targetId || '-'}</span>`,
+                getUserName(l.userId),
+                `<span style="font-size:0.8rem;color:var(--text-light);">${l.details || '-'}</span>`
+            ]);
+            renderTable('exportHistoryTable', headers, rows);
+        }
+
+        function getUniLabel() {
+            if (session.role === 'superadmin') return 'GLOBAL';
+            const unis = getAll('universities');
+            const u = unis.find(x => x.id === session.universityId);
+            return u ? u.name.replace(/[^a-z0-9]/gi, '_') : 'UNI';
+        }
+
+        function downloadFile(filename, content, type = 'text/csv;charset=utf-8;') {
+            try {
+                // Ensure filename is strictly clean and professional
+                const date = new Date().toISOString().split('T')[0];
+                const uni = getUniLabel();
+                const actualName = `CertPro_${uni}_${filename}_${date}.csv`;
+
+                const data = type.includes('csv') ? ["\uFEFF", content] : [content];
+                const finalFilename = type.includes('json') ? filename : actualName;
+
+                const blob = new Blob(data, { type: type });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = finalFilename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                toast(`Report generated: ${finalFilename}`, 'success');
+            } catch (err) {
+                console.error(err);
+                toast('Error creating report file', 'error');
+            }
+        }
+
+        window.doExport = function(type) {
+            if (!hasPermission('export_data')) return toast('Permission Denied', 'error');
+
+            const users = getAll('users');
+            let csv = '';
+
+            try {
+                if (type === 'certificates') {
+                    const data = getAll('certificates').filter(c => isSA || c.universityId === session.universityId);
+                    csv = `${esc('Cert ID')},${esc('Student Name')},${esc('Course')},${esc('Issued By')},${esc('Issued Date')},${esc('Status')}\n`;
+                    data.forEach(c => {
+                        const s = getById('students', c.studentId);
+                        const sName = s ? getUserName(s.userId) : 'Unknown';
+                        csv += `${esc(c.id)},${esc(sName)},${esc(getCourseTypeName(c.courseTypeId))},${esc(getUserName(c.issuedBy))},${esc(c.issuedAt)},${esc(c.status)}\n`;
+                    });
+                } else if (type === 'requests') {
+                    const data = getAll('requests').filter(r => isSA || r.universityId === session.universityId);
+                    csv = `${esc('Request ID')},${esc('Student Name')},${esc('Course')},${esc('Reason')},${esc('Staff Remarks')},${esc('Status')},${esc('Created At')}\n`;
+                    data.forEach(r => {
+                        const s = getById('students', r.studentId);
+                        const sName = s ? getUserName(s.userId) : 'Unknown';
+                        csv += `${esc(r.id)},${esc(sName)},${esc(getCourseTypeName(r.courseTypeId))},${esc(r.reason)},${esc(r.staffRemarks)},${esc(r.status)},${esc(r.createdAt)}\n`;
+                    });
+                } else if (type === 'students') {
+                    const data = getAll('students').filter(s => isSA || s.universityId === session.universityId);
+                    csv = `${esc('Student ID')},${esc('Roll No')},${esc('Name')},${esc('Email')},${esc('Course')},${esc('Adm Year')},${esc('Phone')},${esc('Status')}\n`;
+                    data.forEach(s => {
+                        const u = users.find(x => x.id === s.userId);
+                        const cId = (s.enrolledCourseTypeIds && s.enrolledCourseTypeIds.length > 0) ? s.enrolledCourseTypeIds[0] : '';
+                        csv += `${esc(s.id)},${esc(s.rollNo)},${esc(u ? u.name : '')},${esc(u ? u.email : '')},${esc(getCourseTypeName(cId))},${esc(s.admYear)},${esc(s.phone)},${esc(u ? u.status : '')}\n`;
+                    });
+                } else if (type === 'staff') {
+                    const data = getAll('staff').filter(s => isSA || s.universityId === session.universityId);
+                    csv = `${esc('Staff ID')},${esc('Emp ID')},${esc('Name')},${esc('Email')},${esc('Designation')},${esc('Department')},${esc('Status')}\n`;
+                    data.forEach(s => {
+                        const u = users.find(x => x.id === s.userId);
+                        csv += `${esc(s.id)},${esc(s.empId)},${esc(u ? u.name : '')},${esc(u ? u.email : '')},${esc(s.designation)},${esc(s.department)},${esc(u ? u.status : '')}\n`;
+                    });
+                } else if (type === 'notifications') {
+                    const data = getAll('notifications').filter(n => isSA || n.universityId === session.universityId);
+                    csv = `${esc('ID')},${esc('Sent At')},${esc('Recipient')},${esc('Subject')},${esc('Priority')},${esc('Sent By')}\n`;
+                    data.forEach(n => {
+                        const recipLabel = n.recipientId === 'all' ? 'ALL STUDENTS' : getUserName(getById('students', n.recipientId)?.userId || '');
+                        csv += `${esc(n.id)},${esc(n.sentAt)},${esc(recipLabel)},${esc(n.subject)},${esc(n.priority)},${esc(getUserName(n.sentBy))}\n`;
+                    });
+                } else if (type === 'logs') {
+                    const data = getAll('logs').filter(l => isSA || l.universityId === session.universityId);
+                    csv = `${esc('Log ID')},${esc('Timestamp')},${esc('User')},${esc('Action')},${esc('Target')},${esc('Details')}\n`;
+                    data.forEach(l => {
+                        csv += `${esc(l.id)},${esc(l.timestamp)},${esc(getUserName(l.userId))},${esc(l.action)},${esc(l.targetId)},${esc(l.details)}\n`;
+                    });
+                }
+                
+                if (csv) {
+                    downloadFile(type.toUpperCase(), csv);
+                    logAction('EXPORT_DATA', type.toUpperCase(), `Exported ${type} records to CSV`);
+                    loadHistory();
+                } else {
+                    toast('No data available for export', 'info');
+                }
+            } catch (err) {
+                console.error(err);
+                toast('Export failed', 'error');
+            }
+        }
+
+        // --- UNIVERSAL BACKUP (JSON) ---
+        window.universalExport = function() {
+            const collections = ['users', 'students', 'staff', 'certificates', 'requests', 'certTypes', 'courseTypes', 'universities', 'notifications', 'logs', 'roleSettings'];
+            const backup = { _timestamp: new Date().toISOString(), _exportedBy: session.userId };
+            collections.forEach(c => { backup[c] = getAll(c); });
+            
+            const jsonText = JSON.stringify(backup, null, 2);
+            downloadFile(`certpro_system_backup_${new Date().toISOString().split('T')[0]}.json`, jsonText, 'application/json');
+            logAction('SYSTEM_BACKUP', 'JSON', 'Full system database exported');
+            loadHistory();
+        }
+
+        window.universalImport = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!confirm("⚠️ CAUTION: Importing will OVERWRITE your current database. This cannot be undone. Proceed?")) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    Object.keys(data).forEach(key => {
+                        if (key.startsWith('_')) return; // ignore meta fields
+                        localStorage.setItem(key, JSON.stringify(data[key]));
+                    });
+                    toast('Database restored successfully! Refreshing components...', 'success');
+                    logAction('SYSTEM_RESTORE', 'JSON', 'Universal backup restored from file');
+                    setTimeout(() => window.location.reload(), 1000);
+                } catch (err) {
+                    toast('Invalid backup file!', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- PAGE INITIALIZATION (MUST BE AT BOTTOM) ---
+        if (session) {
+            // FORCE RE-SYNC SETTINGS to fix any stale permission values
+            const DEFAULTS = {
+                admin: ['approve_cert','revoke_cert','create_cert','edit_cert','delete_cert','view_all_certs','approve_request','reject_request','forward_request','view_all_reqs','add_remarks','manage_staff','manage_students','block_user','delete_user','reset_password','manage_courses','manage_cert_types','manage_unis','view_global_data','export_data','view_logs','send_notify','view_notifications'],
+                staff: ['forward_request','add_remarks','view_all_reqs','send_notify','view_logs','export_data','view_notifications'],
+                student: ['request_cert','view_logs','view_notifications']
+            };
+            localStorage.setItem('roleSettings', JSON.stringify(DEFAULTS));
+            localStorage.setItem('roleSettingsVersion', 'v10');
+
+            renderNav(session.role);
+            buildExportCards();
+            loadHistory();
+            logAction('VIEW_EXPORT', 'SYSTEM', 'User accessed the Export Reports page.');
+            if (window.lucide) window.lucide.createIcons();
+        }
+    </script>
+</body>
+</html>

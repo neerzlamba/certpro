@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help Center | CertPro.io</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <style>
+        .page-header { padding: 80px 60px; border-bottom: 1px solid var(--border); background: #080c14; text-align: center; }
+        .page-content { max-width: 800px; margin: 80px auto; padding: 0 40px; }
+        .nav-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 60px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: rgba(3, 7, 18, 0.8); backdrop-filter: blur(10px); z-index: 1000; }
+        .nav-links { display: flex; gap: 30px; align-items: center; }
+        .nav-links a { text-decoration: none; color: var(--text-muted); font-size: 14px; font-weight: 500; transition: var(--transition); }
+        .nav-links a:hover { color: var(--accent-gold); }
+        .faq-item { margin-bottom: 40px; border-bottom: 1px solid var(--border); padding-bottom: 30px; }
+        .faq-item h3 { color: #fff; margin-bottom: 15px; font-size: 1.25rem; }
+        .faq-item p { color: var(--text-muted); font-size: 1rem; line-height: 1.8; }
+    </style>
+</head>
+<body>
+
+    <header class="nav-header">
+        <a href="landing.html" style="text-decoration:none;"><h3 style="font-size: 24px; color: #fff; letter-spacing: -1px; margin:0;">CERTPRO.IO</h3></a>
+        <nav class="nav-links">
+            <a href="about.html">About Us</a>
+            <a href="help.html" style="color: var(--accent-gold);">Help Center</a>
+            <a href="report.html">Transparency</a>
+            <a href="contact.html">Contact</a>
+            <a href="index.html" class="btn btn-primary" style="padding: 10px 20px;">Launch Portal</a>
+        </nav>
+    </header>
+
+    <header class="page-header">
+        <p class="label">USER_GUIDE_AND_FAQ</p>
+        <h1 style="font-size: 3.5rem;">Help Center</h1>
+        <p style="color: var(--text-muted); max-width: 600px; margin: 20px auto 0;">Find answers to common questions about using the CertPro verification ecosystem.</p>
+    </header>
+
+    <main class="page-content">
+        <p class="label">FREQUENTLY_ASKED_QUESTIONS</p>
+
+        <div class="faq-item">
+            <h3>How do colleges join CertPro?</h3>
+            <p>Colleges can sign up directly from our portal. Once verified by our administrators, they are assigned a unique University ID to begin issuing digital certificates.</p>
+        </div>
+
+        <div class="faq-item">
+            <h3>Are the certificates tamper-proof?</h3>
+            <p>Yes. Every certificate is cryptographically signed. If a single character is changed, the QR verification will immediately flag the document as invalid.</p>
+        </div>
+
+        <div class="faq-item">
+            <h3>How do students share their degrees?</h3>
+            <p>Students can curate their "Career Profile" in our portal. They can choose which degrees to make public and then share their unique profile link with employers.</p>
+        </div>
+
+        <div class="faq-item">
+            <h3>Is there a cost for verification?</h3>
+            <p>Public verification via the web portal or QR scanner is completely free for employers and the general public.</p>
+        </div>
+
+        <div class="faq-item" style="border:none;">
+            <h3>What if I lose my login credentials?</h3>
+            <p>Please contact your respective university administration office if you are a student or staff member. System managers can reset accounts via the global user manager.</p>
+        </div>
+
+        <div class="card" style="margin-top: 100px; border-color: var(--accent-gold); text-align: center;">
+            <h3>Still need help?</h3>
+            <p>Reach out to our technical support team for priority assistance.</p>
+            <a href="contact.html" class="btn btn-outline" style="margin-top: 20px;">Contact Support Team</a>
+        </div>
+    </main>
+
+    <footer style="padding: 80px 60px; border-top: 1px solid var(--border); text-align: center; color: var(--text-muted); font-size: 14px;">
+        <p>&copy; 2026 CertPro.io - Global Verification Standards</p>
+    </footer>
+
+</body>
+</html>

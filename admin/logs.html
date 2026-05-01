@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Logs | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+    <style>
+        .action-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-family: var(--font-mono, monospace);
+            font-weight: 600;
+            letter-spacing: 0.03em;
+        }
+        .action-CERT    { background: #e3f2fd; color: #1565c0; }
+        .action-REQUEST { background: #f3e5f5; color: #6a1b9a; }
+        .action-USER    { background: #e8f5e9; color: #2e7d32; }
+        .action-EXPORT  { background: #fff3e0; color: #e65100; }
+        .action-VIEW    { background: #eceff1; color: #37474f; }
+        .action-SEND    { background: #e0f2f1; color: #00695c; }
+        .action-OTHER   { background: #fce4ec; color: #880e4f; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Audit Logs</h1>
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <span id="logCount" style="font-size:0.85rem;color:var(--text-light);">0 entries</span>
+                    <button class="btn" style="border:1px solid var(--border-color);display:flex;align-items:center;gap:6px;" onclick="clearSearch()">
+                        <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filters row -->
+            <div class="card" style="margin-bottom:16px;">
+                <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+                    <input type="text" id="searchInput" placeholder="Search user, action, details..." style="flex:1;min-width:200px;" oninput="loadLogs()">
+                    <select id="filterAction" style="min-width:160px;" onchange="loadLogs()">
+                        <option value="">All Action Types</option>
+                        <option value="CERT">Certificate Actions</option>
+                        <option value="REQUEST">Request Actions</option>
+                        <option value="USER">User Actions</option>
+                        <option value="EXPORT">Exports</option>
+                        <option value="VIEW">Page Views</option>
+                        <option value="SEND">Notifications</option>
+                    </select>
+                    <select id="filterLimit" style="min-width:120px;" onchange="loadLogs()">
+                        <option value="50">Last 50</option>
+                        <option value="100">Last 100</option>
+                        <option value="200">Last 200</option>
+                        <option value="500">All (500)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <div id="logTable"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+const session = requireRoles(['admin', 'staff', 'superadmin', 'student']);
+
+        if (session) {
+            renderNav(session.role);
+            // Log this page visit FIRST, then load
+            logAction('VIEW_LOGS', 'AUDIT', 'User opened Audit Logs. Role: ' + session.role);
+            loadLogs();
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function getActionClass(action) {
+            if (!action) return 'action-OTHER';
+            const a = action.toUpperCase();
+            if (a.includes('CERT'))    return 'action-CERT';
+            if (a.includes('REQUEST')) return 'action-REQUEST';
+            if (a.includes('USER') || a.includes('BLOCK') || a.includes('DELETE') || a.includes('RESET')) return 'action-USER';
+            if (a.includes('EXPORT'))  return 'action-EXPORT';
+            if (a.includes('VIEW'))    return 'action-VIEW';
+            if (a.includes('SEND') || a.includes('NOTIF')) return 'action-SEND';
+            return 'action-OTHER';
+        }
+
+        function loadLogs() {
+            let logs = getAll('logs');
+
+            // Filtering
+            if (session.role === 'student') {
+                logs = logs.filter(l => l.userId === session.userId);
+            } else if (session.role !== 'superadmin') {
+                logs = logs.filter(l => l.universityId === session.universityId);
+            }
+
+            // Action type filter
+            const actionFilter = document.getElementById('filterAction').value;
+            if (actionFilter) {
+                logs = logs.filter(l => (l.action || '').toUpperCase().includes(actionFilter));
+            }
+
+            // Search filter
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            if (search) {
+                logs = logs.filter(l => {
+                    return (
+                        (l.action || '').toLowerCase().includes(search) ||
+                        (l.details || '').toLowerCase().includes(search) ||
+                        getUserName(l.userId).toLowerCase().includes(search) ||
+                        (l.targetId || '').toLowerCase().includes(search)
+                    );
+                });
+            }
+
+            // Sort newest first
+            logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            // Limit
+            const limit = parseInt(document.getElementById('filterLimit').value) || 50;
+            const displayed = logs.slice(0, limit);
+
+            document.getElementById('logCount').innerText = `${displayed.length} of ${logs.length} entries`;
+
+            if (displayed.length === 0) {
+                document.getElementById('logTable').innerHTML = `
+                    <div style="text-align:center;padding:40px;color:var(--text-light);">
+                        <i data-lucide="inbox" style="width:48px;height:48px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;"></i>
+                        <p>No activity logs found. Logs are generated as you use the system.</p>
+                    </div>
+                `;
+                if (window.lucide) window.lucide.createIcons();
+                return;
+            }
+
+            const headers = ['Timestamp', 'User', 'Role', 'Action', 'Target', 'Details'];
+            const rows = displayed.map(l => {
+                const u = getAll('users').find(x => x.id === l.userId);
+                const roleBadge = u ? `<span class="badge badge-${u.role || 'active'}" style="font-size:0.7rem;">${u.role || '?'}</span>` : '-';
+                const cls = getActionClass(l.action);
+                const dt = l.timestamp ? new Date(l.timestamp) : null;
+                const dtStr = dt ? dt.toLocaleDateString('en-IN') + ' ' + dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '-';
+
+                return [
+                    `<span style="font-size:0.82rem;white-space:nowrap;">${dtStr}</span>`,
+                    `<strong style="font-size:0.88rem;">${getUserName(l.userId)}</strong>`,
+                    roleBadge,
+                    `<span class="action-badge ${cls}">${l.action || 'UNKNOWN'}</span>`,
+                    `<span style="font-family:monospace;font-size:0.78rem;">${l.targetId || '-'}</span>`,
+                    `<span style="font-size:0.83rem;color:var(--text-light);" title="${l.details || ''}">${(l.details || '-').substring(0, 50)}${(l.details || '').length > 50 ? '…' : ''}</span>`
+                ];
+            });
+
+            renderTable('logTable', headers, rows);
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterAction').value = '';
+            document.getElementById('filterLimit').value = '50';
+            // Invalidate user cache so fresh data loads
+            if (typeof dbCache !== 'undefined') { Object.keys(dbCache).forEach(k => delete dbCache[k]); }
+            loadLogs();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Directory | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+    <style>
+        /* ── Modal ───────────────────────────── */
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,0.75); backdrop-filter:blur(3px); z-index:1000; justify-content:center; align-items:flex-start; padding-top:60px; }
+        .modal-overlay.open { display:flex; }
+        .modal-box { background:var(--bg-primary); border:1px solid var(--border-color); width:100%; max-width:600px; max-height:88vh; overflow-y:auto; box-shadow:0 30px 60px rgba(0,0,0,0.2); }
+        .modal-hd { display:flex; justify-content:space-between; align-items:center; padding:18px 24px; border-bottom:2px solid var(--text-primary); background:var(--bg-secondary); }
+        .modal-hd h2 { margin:0; font-size:1.2rem; text-transform:uppercase; letter-spacing:-0.02em; display:flex; align-items:center; gap:8px; }
+        .modal-close { background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-secondary); line-height:1; padding:4px 8px; }
+        .modal-close:hover { color:var(--btn-danger); }
+        .modal-bd { padding:24px; }
+        .modal-ft { padding:16px 24px; border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; gap:10px; background:var(--bg-secondary); }
+
+        /* ── Form ────────────────────────────── */
+        .fg { margin-bottom:14px; }
+        .fg label { display:flex; align-items:center; gap:6px; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-secondary); margin-bottom:6px; }
+        .fg label .lbl-icon { font-size:0.9rem; }
+        .fg input, .fg select, .fg textarea {
+            width:100%; padding:9px 12px; border:1px solid var(--border-color);
+            background:var(--bg-primary); color:var(--text-primary);
+            font-family:var(--font-body); font-size:0.9rem; box-sizing:border-box;
+            transition:border-color 0.15s;
+        }
+        .fg input:focus, .fg select:focus, .fg textarea:focus { outline:none; border-color:var(--text-primary); }
+        .fg textarea { resize:vertical; min-height:72px; }
+        .form-2col { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+        .sec-label { font-family:var(--font-mono); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.18em; color:var(--text-tertiary); border-bottom:1px solid var(--border-color); padding-bottom:5px; margin:18px 0 12px; }
+        .req { color:var(--btn-danger); }
+
+        /* ── Table ───────────────────────────── */
+        .tbl-wrap { overflow-x:auto; }
+        table { width:100%; border-collapse:collapse; font-size:0.86rem; }
+        th { background:var(--bg-secondary); padding:10px 12px; text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; border-bottom:2px solid var(--border-color); white-space:nowrap; }
+        td { padding:9px 12px; border-bottom:1px solid var(--border-color); vertical-align:middle; }
+        tr:hover td { background:#fafbfc; }
+        .empty-row td { text-align:center; padding:48px; color:var(--text-secondary); font-size:0.88rem; }
+        .role-pill { display:inline-block; font-size:0.7rem; padding:2px 8px; border:1px solid var(--border-color); background:var(--bg-secondary); font-family:var(--font-mono); text-transform:uppercase; white-space:nowrap; }
+        .reason-note { display:block; font-size:0.72rem; color:var(--btn-danger); margin-top:3px; font-style:italic; }
+        .mono { font-family:var(--font-mono); }
+
+        /* ── Filters ─────────────────────────── */
+        .filters { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
+        .filters input, .filters select { padding:8px 12px; border:1px solid var(--border-color); background:var(--bg-primary); font-family:var(--font-body); font-size:0.86rem; }
+        .count-label { font-family:var(--font-mono); font-size:0.75rem; color:var(--text-tertiary); margin-left:auto; }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <div id="sidebar-container"></div>
+    <main class="main-content">
+
+        <div class="page-header">
+            <h1 class="page-title"><i data-lucide="users" style="width:24px;height:24px;margin-right:8px;vertical-align:bottom;"></i> User Directory</h1>
+            <button class="btn btn-primary" id="btnNew" style="display:flex;align-items:center;gap:6px;">
+                <i data-lucide="plus" style="width:16px;height:16px;"></i> Create New User
+            </button>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="card" style="margin-bottom:16px;padding:14px 20px;">
+            <div class="filters">
+                <input type="text" id="fSearch" placeholder="Search name, email, roll no..." style="min-width:260px;" oninput="applyFilters()">
+                <select id="fRole" onchange="applyFilters()">
+                    <option value="all">All Roles</option>
+                    <option value="superadmin">Main Admin</option>
+                    <option value="admin">University Admin</option>
+                    <option value="staff">Staff</option>
+                    <option value="student">Student</option>
+                </select>
+                <select id="fStatus" onchange="applyFilters()">
+                    <option value="all">All Statuses</option>
+                    <option value="active">Active</option>
+                    <option value="blocked">Blocked</option>
+                </select>
+                <select id="fUni" onchange="applyFilters()">
+                    <option value="all">All Universities</option>
+                </select>
+                <span class="count-label" id="countLabel">— users</span>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="card" style="padding:0;">
+            <div class="tbl-wrap">
+                <div id="usersTbl">
+                    <div class="table-loading"><span class="spinner"></span> Loading users...</div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- ════ CREATE / EDIT MODAL ════ -->
+<div id="userModal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-hd">
+        <h2 id="modalTitle"><i data-lucide="user-plus" style="width:20px;height:20px;"></i> Create New User</h2>
+        <button class="modal-close" id="btnCloseModal">✕</button>
+    </div>
+    <div class="modal-bd">
+        <input type="hidden" id="fId">
+
+        <!-- Basic Info -->
+        <div class="sec-label">Basic Information</div>
+        <div class="form-2col">
+            <div class="fg">
+                <label><i data-lucide="user" class="lbl-icon" style="width:14px;height:14px;"></i> Full Name <span class="req">*</span></label>
+                <input type="text" id="fName" placeholder="e.g. Rahul Sharma" autocomplete="off">
+            </div>
+            <div class="fg">
+                <label><i data-lucide="phone" class="lbl-icon" style="width:14px;height:14px;"></i> Phone Number</label>
+                <input type="text" id="fPhone" placeholder="e.g. +91 98765 43210" autocomplete="off">
+            </div>
+        </div>
+        <div class="form-2col">
+            <div class="fg">
+                <label><i data-lucide="mail" class="lbl-icon" style="width:14px;height:14px;"></i> Email Address <span class="req">*</span></label>
+                <input type="text" id="fEmail" placeholder="e.g. rahul@university.com" autocomplete="off">
+            </div>
+            <div class="fg">
+                <label><i data-lucide="lock" class="lbl-icon" style="width:14px;height:14px;"></i> Password</label>
+                <input type="password" id="fPwd" placeholder="Leave blank → default: pass123">
+            </div>
+        </div>
+        <div class="fg">
+            <label><i data-lucide="file-text" class="lbl-icon" style="width:14px;height:14px;"></i> Bio / Notes</label>
+            <textarea id="fBio" placeholder="Short description or notes about this user..."></textarea>
+        </div>
+
+        <!-- Role & Access -->
+        <div class="sec-label">Role & Access</div>
+        <div class="form-2col">
+            <div class="fg">
+                <label><i data-lucide="tag" class="lbl-icon" style="width:14px;height:14px;"></i> Role <span class="req">*</span></label>
+                <select id="modalRoleSelect">
+                    <option value="student">Student</option>
+                    <option value="admin">University Admin</option>
+                    <option value="staff">Staff</option>
+                    <option value="superadmin">Main Admin</option>
+                </select>
+            </div>
+            <div class="fg">
+                <label><i data-lucide="calendar" class="lbl-icon" style="width:14px;height:14px;"></i> Join Date</label>
+                <input type="date" id="fJoinDate">
+            </div>
+        </div>
+
+        <!-- University (hidden for superadmin) -->
+        <div class="fg" id="grpUni">
+            <label><i data-lucide="building" class="lbl-icon" style="width:14px;height:14px;"></i> University <span class="req">*</span></label>
+            <select id="modalUniSelect">
+                <option value="">— Select a University —</option>
+            </select>
+        </div>
+
+        <!-- Student-only fields -->
+        <div id="grpStudent" style="display:none;">
+            <div class="sec-label">Student Information</div>
+            <div class="form-2col">
+                <div class="fg">
+                    <label><i data-lucide="hash" class="lbl-icon" style="width:14px;height:14px;"></i> Roll Number</label>
+                    <input type="text" id="fRoll" placeholder="e.g. 2024CS001" autocomplete="off">
+                </div>
+                <div class="fg">
+                    <label><i data-lucide="calendar-days" class="lbl-icon" style="width:14px;height:14px;"></i> Date of Birth</label>
+                    <input type="date" id="fDob">
+                </div>
+            </div>
+            <div class="form-2col">
+                <div class="fg">
+                    <label><i data-lucide="book-open" class="lbl-icon" style="width:14px;height:14px;"></i> Enrolled Course</label>
+                    <select id="fCourse">
+                        <option value="">— Select Course (optional) —</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label><i data-lucide="calendar" class="lbl-icon" style="width:14px;height:14px;"></i> Admission Year</label>
+                    <input type="text" id="fAdmYear" placeholder="e.g. 2024" autocomplete="off">
+                </div>
+            </div>
+            <div class="fg">
+                <label><i data-lucide="home" class="lbl-icon" style="width:14px;height:14px;"></i> Home Address</label>
+                <textarea id="fAddr" placeholder="Student's permanent address..." style="min-height:56px;"></textarea>
+            </div>
+        </div>
+
+        <!-- Admin/Staff extra -->
+        <div id="grpStaff" style="display:none;">
+            <div class="sec-label">Employee Information</div>
+            <div class="form-2col">
+                <div class="fg">
+                    <label><i data-lucide="id-card" class="lbl-icon" style="width:14px;height:14px;"></i> Employee ID</label>
+                    <input type="text" id="fEmpId" placeholder="e.g. EMP-2024-001" autocomplete="off">
+                </div>
+                <div class="fg">
+                    <label>Designation / Title</label>
+                    <input type="text" id="fDesig" placeholder="e.g. Professor, HOD, Clerk">
+                </div>
+            </div>
+            <div class="fg">
+                <label>Department</label>
+                <input type="text" id="fDept" placeholder="e.g. Science, Accounts">
+            </div>
+        </div>
+
+    </div>
+    <div class="modal-ft">
+        <button class="btn" id="btnCancel" style="border:1px solid var(--border-color);">Cancel</button>
+        <button class="btn btn-primary" id="btnSave">Save User</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/db.js"></script>
+<script src="../assets/auth.js"></script>
+<script src="../assets/app.js"></script>
+<script>
+(function () {
+    const session = requireRole('superadmin');
+    if (!session) return;
+    renderNav('superadmin');
+
+    let allUsers = [];
+    let allUnis  = [];
+
+    // ── Populate university filter bar ────────────────────
+    function populateUniFilter() {
+        const sel = document.getElementById('fUni');
+        // keep the "All" option, then add each uni
+        const existing = document.getElementById('fUni').children;
+        // Actually the filter bar has a separate select from the modal one.
+        // The filter select id is also fUni — so need distinct IDs.
+        // Filter bar uses fUni (already populated below in loadAll)
+    }
+
+    function loadAll() {
+        allUsers = getAll('users');
+        allUnis  = getAll('universities').filter(u => u.status === 'active');
+
+        // Populate university filter dropdown
+        const uniSel = document.getElementById('fUni');
+        const curVal = uniSel.value;
+        uniSel.innerHTML = '<option value="all">All Universities</option>';
+        allUnis.forEach(u => {
+            const o = document.createElement('option');
+            o.value = u.id; o.textContent = u.name;
+            uniSel.appendChild(o);
+        });
+        uniSel.value = curVal;
+
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const q       = document.getElementById('fSearch').value.trim().toLowerCase();
+        const role    = document.getElementById('fRole').value;
+        const status  = document.getElementById('fStatus').value;
+        const uniId   = document.getElementById('fUni').value;
+
+        const filtered = allUsers.filter(u => {
+            const nm  = (u.name  || '').toLowerCase();
+            const em  = (u.email || '').toLowerCase();
+            const rn  = (u.rollNo|| '').toLowerCase();
+            const mQ  = !q || nm.includes(q) || em.includes(q) || rn.includes(q);
+            const mR  = role   === 'all' || u.role   === role;
+            const mS  = status === 'all' || u.status === status;
+            const mU  = uniId  === 'all' || u.universityId === uniId;
+            return mQ && mR && mS && mU;
+        });
+
+        document.getElementById('countLabel').textContent = `${filtered.length} user${filtered.length !== 1 ? 's' : ''}`;
+        renderTable(filtered);
+    }
+    window.applyFilters = applyFilters;
+
+    // ── RENDER TABLE ──────────────────────────────────────
+    function renderTable(users) {
+        const wrap = document.getElementById('usersTbl');
+        if (!users.length) {
+            wrap.innerHTML = `<table><tr class="empty-row"><td colspan="9">No users match the current filters.</td></tr></table>`;
+            return;
+        }
+
+        const uniMap = {};
+        getAll('universities').forEach(u => uniMap[u.id] = u.name);
+
+        const roleLabel = { superadmin:'Main Admin', admin:'University Admin', staff:'Staff', student:'Student' };
+
+        let html = `<table>
+            <thead><tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Roll No</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>University</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th style="text-align:right;">Actions</th>
+            </tr></thead><tbody>`;
+
+        users.forEach((u, i) => {
+            const uni   = u.universityId ? (uniMap[u.universityId] || '—') : '—';
+            const rl    = roleLabel[u.role] || u.role;
+            const isBlk = u.status === 'blocked';
+            const badge = isBlk
+                ? `<span class="badge badge-blocked">Blocked</span>`
+                : `<span class="badge badge-active">Active</span>`;
+            const reason = u.statusReason
+                ? `<span class="reason-note">⚠ ${u.statusReason}</span>` : '';
+            const rollCell = u.role === 'student'
+                ? `<span class="mono" style="font-size:0.8rem;">${u.rollNo || '<span style="opacity:0.35">—</span>'}</span>`
+                : `<span style="opacity:0.25">—</span>`;
+
+            const blockBtn = isBlk
+                ? `<button class="btn btn-success" style="padding:3px 8px;font-size:0.75rem;" data-act="unblock" data-id="${u.id}" title="Unblock">✔ Unblock</button>`
+                : `<button class="btn" style="padding:3px 8px;font-size:0.75rem;background:#f57c00;color:#fff;" data-act="block" data-id="${u.id}" title="Block">⊘ Block</button>`;
+
+            html += `<tr>
+                <td style="color:var(--text-tertiary);font-size:0.75rem;">${i+1}</td>
+                <td><strong>${u.name || '—'}</strong></td>
+                <td>${rollCell}</td>
+                <td style="font-size:0.82rem;color:var(--text-secondary);">${u.email || '—'}</td>
+                <td><span class="role-pill">${rl}</span></td>
+                <td style="font-size:0.8rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${uni}">${uni}</td>
+                <td style="font-size:0.8rem;color:var(--text-secondary);">${u.phone || '—'}</td>
+                <td>${badge}${reason}</td>
+                <td style="text-align:right;white-space:nowrap;">
+                    <button class="btn btn-primary" style="padding:3px 8px;font-size:0.75rem;" data-act="edit" data-id="${u.id}">✏ Edit</button>
+                    ${blockBtn}
+                    <button class="btn btn-danger" style="padding:3px 8px;font-size:0.75rem;margin-left:3px;" data-act="del" data-id="${u.id}">🗑 Del</button>
+                </td>
+            </tr>`;
+        });
+
+        html += '</tbody></table>';
+        wrap.innerHTML = html;
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    // ── TABLE DELEGATION ──────────────────────────────────
+    document.getElementById('usersTbl').addEventListener('click', e => {
+        const btn = e.target.closest('[data-act]');
+        if (!btn) return;
+        const act = btn.dataset.act;
+        const id  = btn.dataset.id;
+        if (act === 'edit')    openEdit(id);
+        if (act === 'block')   doBlock(id);
+        if (act === 'unblock') doUnblock(id);
+        if (act === 'del')     doDelete(id);
+    });
+
+    // ── MODAL OPEN/CLOSE ──────────────────────────────────
+    function openModal() { document.getElementById('userModal').classList.add('open'); }
+    function closeModal() { document.getElementById('userModal').classList.remove('open'); }
+
+    // ── FILL DROPDOWNS ────────────────────────────────────
+    function fillUniDrop(selId) {
+        const modalSel = getModalUni();
+        modalSel.innerHTML = '<option value="">— Select a University —</option>';
+        allUnis.forEach(u => {
+            const o = document.createElement('option');
+            o.value = u.id; o.textContent = u.name;
+            if (u.id === selId) o.selected = true;
+            modalSel.appendChild(o);
+        });
+    }
+
+    function fillCourseDrop(selId) {
+        const sel = document.getElementById('fCourse');
+        sel.innerHTML = '<option value="">— Select Course (optional) —</option>';
+        getAll('courseTypes').filter(c => c.status === 'active').forEach(c => {
+            const o = document.createElement('option');
+            o.value = c.id; o.textContent = c.name;
+            if (c.id === selId) o.selected = true;
+            sel.appendChild(o);
+        });
+    }
+
+    function getModalUni() {
+        return document.getElementById('modalUniSelect');
+    }
+
+    function toggleExtras() {
+        const role = document.getElementById('modalRoleSelect').value;
+        document.getElementById('grpUni').style.display     = role === 'superadmin' ? 'none' : 'block';
+        document.getElementById('grpStudent').style.display = role === 'student'    ? 'block' : 'none';
+        document.getElementById('grpStaff').style.display   = (role === 'staff' || role === 'admin') ? 'block' : 'none';
+    }
+
+    document.getElementById('modalRoleSelect').addEventListener('change', toggleExtras);
+
+    // ── OPEN CREATE ───────────────────────────────────────
+    document.getElementById('btnNew').addEventListener('click', () => {
+        document.getElementById('fId').value     = '';
+        document.getElementById('fName').value   = '';
+        document.getElementById('fPhone').value  = '';
+        document.getElementById('fEmail').value  = '';
+        document.getElementById('fPwd').value    = '';
+        document.getElementById('fBio').value    = '';
+        document.getElementById('modalRoleSelect').value   = 'student';
+        document.getElementById('fJoinDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('fRoll').value   = '';
+        document.getElementById('fDob').value    = '';
+        document.getElementById('fAdmYear').value= '';
+        document.getElementById('fAddr').value   = '';
+        document.getElementById('fEmpId').value  = '';
+        document.getElementById('fDesig').value  = '';
+        document.getElementById('fDept').value   = '';
+        document.getElementById('modalTitle').innerHTML = '<i data-lucide="user-plus" style="width:20px;height:20px;"></i> Create New User';
+        if (window.lucide) window.lucide.createIcons();
+        fillUniDrop('');
+        fillCourseDrop('');
+        toggleExtras();
+        openModal();
+        setTimeout(() => document.getElementById('fName').focus(), 80);
+    });
+
+    // ── OPEN EDIT ─────────────────────────────────────────
+    function openEdit(id) {
+        const u = getById('users', id);
+        if (!u) { toast('User not found', 'error'); return; }
+        const stu = u.role === 'student' ? getAll('students').find(s => s.userId === id) : null;
+        const emp = (u.role === 'staff' || u.role === 'admin') ? (getAll('staff').find(s => s.userId === id) || {}) : {};
+
+        document.getElementById('fId').value     = u.id;
+        document.getElementById('fName').value   = u.name  || '';
+        document.getElementById('fPhone').value  = u.phone || '';
+        document.getElementById('fEmail').value  = u.email || '';
+        document.getElementById('fPwd').value    = '';
+        document.getElementById('fBio').value    = u.bio   || '';
+        document.getElementById('modalRoleSelect').value   = u.role  || 'student';
+        document.getElementById('fJoinDate').value = u.createdAt || '';
+        document.getElementById('fRoll').value   = u.rollNo || (stu ? stu.rollNo || '' : '');
+        document.getElementById('fDob').value    = u.dob   || (stu ? stu.dob   || '' : '');
+        document.getElementById('fAdmYear').value= u.admYear || (stu ? stu.admYear || '' : '');
+        document.getElementById('fAddr').value   = u.address || (stu ? stu.address || '' : '');
+        document.getElementById('fEmpId').value  = u.empId || emp.empId || '';
+        document.getElementById('fDesig').value  = u.designation || emp.designation || '';
+        document.getElementById('fDept').value   = u.department || emp.department || '';
+        document.getElementById('modalTitle').innerHTML = '<i data-lucide="edit-3" style="width:20px;height:20px;"></i> Edit User';
+        if (window.lucide) window.lucide.createIcons();
+        fillUniDrop(u.universityId || '');
+        fillCourseDrop(stu ? (stu.enrolledCourseTypeIds || [])[0] || '' : '');
+        toggleExtras();
+        openModal();
+    }
+
+    // ── SAVE ──────────────────────────────────────────────
+    document.getElementById('btnSave').addEventListener('click', () => {
+        let uId     = document.getElementById('fId').value.trim();
+        const name  = document.getElementById('fName').value.trim();
+        const email = document.getElementById('fEmail').value.trim();
+        const pwd   = document.getElementById('fPwd').value.trim();
+        const bio   = document.getElementById('fBio').value.trim();
+        const role  = document.getElementById('modalRoleSelect').value;
+        const uniEl = getModalUni();
+        const uniId = uniEl ? uniEl.value : '';
+        const joinDt= document.getElementById('fJoinDate').value;
+        const status= 'active';
+        const desig = document.getElementById('fDesig').value.trim();
+        const dept  = document.getElementById('fDept').value.trim();
+        const courseId = document.getElementById('fCourse').value;
+        const admYear = document.getElementById('fAdmYear').value.trim();
+
+        // Validation
+        if (!name)  { toast('Full Name is required', 'error'); document.getElementById('fName').focus(); return; }
+        if (!email) { toast('Email Address is required', 'error'); document.getElementById('fEmail').focus(); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('Enter a valid email address', 'error'); return; }
+        if (role !== 'superadmin' && !uniId) { toast('Please select a University', 'error'); return; }
+
+        // Generate specialized IDs if they don't exist
+        const isStudent = (role === 'student');
+        const isAuthority= (role === 'admin' || role === 'staff');
+        
+        let rollVal = document.getElementById('fRoll').value.trim();
+        if(isStudent && !rollVal) {
+            rollVal = generateRollNo(uniId, courseId, admYear);
+        }
+        
+        let empVal = document.getElementById('fEmpId').value.trim();
+        if(isAuthority && !empVal) {
+            empVal = generateEmpId(uniId);
+        }
+
+        if (uId) {
+            update('users', uId, { 
+                name, email, role, universityId: uniId, bio, status, 
+                rollNo: rollVal, empId: empVal, designation: desig, department: dept 
+            });
+            
+            if (role === 'student') {
+                const stu = getAll('students').find(s => s.userId === uId);
+                if (stu) update('students', stu.id, { 
+                    rollNo: rollVal, enrolledCourseTypeIds: courseId ? [courseId] : [], 
+                    universityId: uniId, admYear: admYear 
+                });
+            } else if (role === 'admin' || role === 'staff') {
+                const stf = getAll('staff').find(s => s.userId === uId);
+                if (stf) update('staff', stf.id, { 
+                    empId: empVal, designation: desig, department: dept, universityId: uniId 
+                });
+            }
+            logAction('UPDATE_USER', uId, `Updated ${role} profile for ${name}`);
+            toast('✅ User updated successfully');
+        } else {
+            const dup = getAll('users').find(u => u.email.toLowerCase() === email.toLowerCase());
+            if (dup) { toast('A user with this email already exists', 'error'); return; }
+            
+            const newUId = generateId('USR');
+            const newUser = {
+                id: newUId, name, email,
+                password: pwd || 'pass123',
+                role, universityId: uniId,
+                bio, status,
+                rollNo: rollVal, empId: empVal,
+                designation: desig, department: dept,
+                createdAt: joinDt || new Date().toISOString().split('T')[0]
+            };
+            create('users', newUser);
+
+            if (role === 'student') {
+                create('students', {
+                    id: generateId('STU'),
+                    userId: newUId, universityId: uniId,
+                    rollNo: rollVal, enrolledCourseTypeIds: courseId ? [courseId] : [],
+                    status: 'active', admYear: admYear
+                });
+            } else if (role === 'admin' || role === 'staff') {
+                create('staff', {
+                    id: generateId('STA'),
+                    userId: newUId, universityId: uniId,
+                    empId: empVal, designation: desig, department: dept, status: 'active'
+                });
+            }
+            logAction('CREATE_USER', newUId, `Created new ${role}: ${name}`);
+            toast(`✅ User created! Default password: ${pwd || 'pass123'}`);
+        }
+
+        closeModal();
+        loadAll();
+    });
+
+    // ── BLOCK / UNBLOCK / DELETE ──────────────────────────
+    function doBlock(id) {
+        if (id === session.userId) { toast('You cannot block yourself', 'error'); return; }
+        const reason = window.prompt('📝 Enter reason for blocking this user:');
+        if (reason === null) return;
+        if (!reason.trim()) { toast('A reason is required', 'error'); return; }
+        update('users', id, { status: 'blocked', statusReason: reason.trim() });
+        logAction('BLOCK_USER', id, `Reason: ${reason.trim()}`);
+        toast('⊘ User blocked');
+        loadAll();
+    }
+
+    function doUnblock(id) {
+        update('users', id, { status: 'active', statusReason: '' });
+        logAction('UNBLOCK_USER', id, `User restored to active status`);
+        toast('✔ User unblocked');
+        loadAll();
+    }
+
+    function doDelete(id) {
+        if (id === session.userId) { toast('You cannot delete yourself', 'error'); return; }
+        const reason = window.prompt('⚠️ Enter reason for permanently deleting this user:');
+        if (reason === null) return;
+        if (!reason.trim()) { toast('A reason is required', 'error'); return; }
+        if (!window.confirm('Are you absolutely sure? This action CANNOT be undone.')) return;
+
+        const u = getById('users', id);
+        if (u) {
+            if (u.role === 'student') {
+                const st = getAll('students').find(s => s.userId === id);
+                if (st) remove('students', st.id);
+            } else if (u.role === 'staff' || u.role === 'admin') {
+                const st = getAll('staff').find(s => s.userId === id);
+                if (st) remove('staff', st.id);
+            }
+        }
+        remove('users', id);
+        logAction('DELETE_USER', id, `Permanently deleted user and associated records. Reason: ${reason.trim()}`);
+        toast('🗑 User permanently deleted');
+        loadAll();
+    }
+
+    // ── CLOSE BUTTONS ─────────────────────────────────────
+    document.getElementById('btnCloseModal').addEventListener('click', closeModal);
+    document.getElementById('btnCancel').addEventListener('click', closeModal);
+    document.getElementById('userModal').addEventListener('click', e => {
+        if (e.target === document.getElementById('userModal')) closeModal();
+    });
+
+    // ── INITIAL LOAD ───────────────────────────────────────
+    loadAll();
+
+})();
+</script>
+</body>
+</html>

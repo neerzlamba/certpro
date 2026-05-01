@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Portal | CertPro</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <style>
+        .portal-wrapper {
+            min-height: 100vh;
+            display: flex;
+            background-color: var(--bg-tertiary);
+            background-image: linear-gradient(var(--border-color) 1px, transparent 1px),
+            linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+            background-size: 40px 40px; 
+            padding: 40px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .portal-container {
+            background: var(--bg-primary);
+            border: 1px solid var(--text-primary);
+            box-shadow: 15px 15px 0px var(--border-color);
+            width: 100%;
+            max-width: 600px;
+            margin-top: 40px;
+        }
+
+        .portal-header {
+            border-bottom: 1px solid var(--border-color);
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .portal-logo {
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            font-weight: 900;
+        }
+
+        .portal-tabs {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            background: none;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-right: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .tab-btn:last-child {
+            border-right: none;
+        }
+
+        .tab-btn.active {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--text-primary);
+            margin-bottom: -2px;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 40px 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Timeline styles for Tracker */
+        .timeline { margin-top: 20px; border-left: 2px solid var(--border-color); padding-left: 20px; font-family: var(--font-mono); font-size: 0.85rem; }
+        .timeline-item { margin-bottom: 20px; position: relative; }
+        .timeline-item::before { content: ''; position: absolute; left: -27px; top: 2px; width: 12px; height: 12px; background: var(--bg-primary); border: 2px solid var(--border-color); }
+        .timeline-item.active::before { border-color: var(--accent); background: var(--accent); }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .portal-wrapper { padding: 16px; align-items: stretch; }
+            .portal-container { margin-top: 16px; box-shadow: 6px 6px 0px var(--border-color); }
+            .portal-header { padding: 14px 16px; }
+            .portal-logo { font-size: 1.2rem; }
+            .tab-btn { padding: 12px 8px; font-size: 0.75rem; }
+            .tab-content { padding: 24px 16px; }
+            .track-search-form, .verify-search-form {
+                flex-direction: column;
+            }
+            .track-search-form button,
+            .verify-search-form button { width: 100%; }
+            .verify-result-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 420px) {
+            .tab-btn { font-size: 0.68rem; padding: 10px 4px; }
+            .portal-logo { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="portal-wrapper">
+        <div class="portal-container">
+            <div class="portal-header">
+                <div class="portal-logo">CertPro Terminal</div>
+                <a href="index.html" style="font-family:var(--font-mono); font-size:0.8rem; color:var(--text-secondary); text-decoration:none;">&larr; Return to System</a>
+            </div>
+
+            <div class="portal-tabs">
+                <button class="tab-btn active" onclick="switchTab('login')">Login</button>
+                <button class="tab-btn" onclick="switchTab('signup')">Enroll</button>
+                <button class="tab-btn" onclick="switchTab('track')">Track</button>
+                <button class="tab-btn" onclick="switchTab('verify')">Verify</button>
+            </div>
+
+            <!-- LOGIN TAB -->
+            <div id="login" class="tab-content active">
+                <h2 style="margin-bottom:20px;">System Access</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="email" required placeholder="Enter email">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="password" required placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+                </form>
+
+                <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 15px; font-family:var(--font-mono); text-transform:uppercase;">Demo Login Shortcuts</p>
+                    <div class="form-row" style="gap:8px;">
+                        <button class="btn" style="font-size:0.75rem;" onclick="quickLogin('super@cert.com', 'super123')">Super Admin</button>
+                        <button class="btn" style="font-size:0.75rem;" onclick="quickLogin('admin@uni1.com', 'admin123')">University Admin</button>
+                        <button class="btn" style="font-size:0.75rem;" onclick="quickLogin('staff@uni1.com', 'staff123')">Staff Member</button>
+                        <button class="btn" style="font-size:0.75rem;" onclick="quickLogin('student@uni1.com', 'student123')">Student</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SIGNUP TAB -->
+            <div id="signup" class="tab-content">
+                <h2 style="margin-bottom:20px;">Student Enrollment</h2>
+                <form id="signupForm">
+                    <div class="form-group">
+                        <label>Full Legal Name</label>
+                        <input type="text" id="suName" required placeholder="As it appears on documentation">
+                    </div>
+                    <div class="form-group">
+                        <label>Email Connect</label>
+                        <input type="email" id="suEmail" required placeholder="name@domain.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="suPassword" required placeholder="••••••••">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Contact</label>
+                        <input type="text" id="suPhone" required placeholder="+91 0000000000">
+                    </div>
+                    <div class="form-group">
+                        <label>Select University</label>
+                        <input type="text" id="suSearchUni" placeholder="Filter university..." onkeyup="filterUniOptions()" style="margin-bottom:8px; padding:8px; border:1px dashed var(--border-color); font-size:0.85rem; width:100%; box-sizing:border-box;" autocomplete="off">
+                        <select id="suUniversity" required></select>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%; margin-top:10px;">Sign Up</button>
+                </form>
+            </div>
+
+            <!-- TRACK TAB -->
+            <div id="track" class="tab-content">
+                <h2 style="margin-bottom:20px;">Track Request</h2>
+                <form id="trackForm" class="track-search-form" style="display:flex; gap:10px; margin-bottom:20px;">
+                    <input type="text" id="reqIdInput" required placeholder="REQ-000..." style="flex:1;">
+                    <button type="submit" class="btn btn-primary" style="padding:10px 24px;">Search</button>
+                </form>
+                <div id="trackResultBox" style="display:none; border-top:1px solid var(--border-color); padding-top:20px;">
+                    <div style="margin-bottom:15px;"><label>Status</label><div id="trackStatusBadge"></div></div>
+                    <label>Timeline Log</label>
+                    <div class="timeline" id="trackTimelineBox"></div>
+                </div>
+            </div>
+
+            <div id="verify" class="tab-content">
+                <h2 style="margin-bottom:20px;">Verify Certificate</h2>
+                <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:20px;">Verify the authenticity of any valid certificate in the system.</p>
+                <form id="verifyForm" class="verify-search-form" style="display:flex; gap:10px; margin-bottom:20px;">
+                    <input type="text" id="certIdInput" required placeholder="CERT-000..." style="flex:1;">
+                    <button type="submit" class="btn btn-primary" style="padding:10px 24px;">Verify</button>
+                </form>
+                <div id="verifyResultBox" style="display:none; border-top:1px solid var(--border-color); padding-top:20px;"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/db.js"></script>
+    <script src="assets/auth.js"></script>
+    <script src="assets/app.js"></script>
+    
+    <!-- Unified Portal Logic -->
+    <script>
+        // Tab Switcher
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+            
+            // Auto reload dynamic data when visiting a tab
+            if(tabId === 'signup') loadUniversities();
+        }
+
+        // On Load Parameters (e.g. ?tab=verify)
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tabParam = urlParams.get('tab');
+            if(tabParam && document.getElementById(tabParam)) {
+                const btn = document.querySelector(`.tab-btn[onclick="switchTab('${tabParam}')"]`);
+                if(btn) btn.click();
+            }
+
+            // Also check for 'id' for auto verification
+            const certIdParam = urlParams.get('id');
+            if(certIdParam) {
+                const vBtn = document.querySelector(`.tab-btn[onclick="switchTab('verify')"]`);
+                if(vBtn) vBtn.click();
+                document.getElementById('certIdInput').value = certIdParam;
+                document.getElementById('verifyForm').dispatchEvent(new Event('submit'));
+            }
+        }
+
+        // ------------------ LOGIN LOGIC ------------------
+        document.getElementById('loginForm').onsubmit = function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const role = login(email, password);
+            if (role === 'blocked') {
+                toast('Account is blocked. Contact support.', 'error');
+            } else if (role) {
+                let path = '';
+                if (role === 'superadmin') path = 'sa/dashboard.html';
+                else if (role === 'admin') path = 'admin/dashboard.html';
+                else if (role === 'staff') path = 'staff/dashboard.html';
+                else if (role === 'student') path = 'student/dashboard.html';
+                window.location.href = path;
+            } else {
+                toast('Invalid access credentials', 'error');
+            }
+        };
+
+        function quickLogin(email, password) {
+            document.getElementById('email').value = email;
+            document.getElementById('password').value = password;
+            document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+        }
+
+        let allSignupUnis = [];
+        
+        function loadUniversities() {
+            allSignupUnis = getAll('universities').filter(u => u.status === 'active');
+            renderUniOptions(allSignupUnis);
+        }
+
+        function renderUniOptions(uniArray) {
+            let html = '<option value="">Select University...</option>';
+            uniArray.forEach(u => html += `<option value="${u.id}">${u.name}</option>`);
+            document.getElementById('suUniversity').innerHTML = html;
+        }
+
+        window.filterUniOptions = function() {
+            const q = document.getElementById('suSearchUni').value.toLowerCase();
+            const filtered = allSignupUnis.filter(u => u.name.toLowerCase().includes(q));
+            renderUniOptions(filtered);
+        }
+
+        document.getElementById('signupForm').onsubmit = function(e) {
+            e.preventDefault();
+            const email = document.getElementById('suEmail').value;
+            if (getAll('users').some(u => u.email === email)) {
+                toast("Identity conflict: Email exists", "error");
+                return;
+            }
+            const newUserId = generateId('USR');
+            const uniId = document.getElementById('suUniversity').value;
+            
+            create('users', {
+                id: newUserId, name: document.getElementById('suName').value, email: email,
+                password: document.getElementById('suPassword').value, role: 'student', universityId: uniId,
+                status: 'active', createdAt: new Date().toISOString().split('T')[0]
+            });
+
+            create('students', {
+                id: generateId('STU'), userId: newUserId, universityId: uniId,
+                enrolledCourseTypeIds: [], phone: document.getElementById('suPhone').value, bio: '', status: 'active'
+            });
+
+            toast("Profile synchronized. Loading login matrix...", "success");
+            setTimeout(() => { switchTab('login'); }, 1500);
+        };
+
+        // ------------------ TRACK LOGIC ------------------
+        document.getElementById('trackForm').onsubmit = function(e) {
+            e.preventDefault();
+            const reqId = document.getElementById('reqIdInput').value.trim();
+            const req = getAll('requests').find(i => i.id === reqId);
+            
+            const rBox = document.getElementById('trackResultBox');
+            const tBox = document.getElementById('trackTimelineBox');
+            rBox.style.display = 'block';
+
+            if (!req) {
+                document.getElementById('trackStatusBadge').innerHTML = `<span style="color:var(--btn-danger); font-family:var(--font-mono);">NULL REF: No matching manifest</span>`;
+                tBox.innerHTML = '';
+                return;
+            }
+
+            document.getElementById('trackStatusBadge').innerHTML = getStatusBadge(req.status);
+            let tl = `<div class="timeline-item active"><strong>Record Registered</strong><br><span style="color:var(--text-secondary);">Logged at ${formatDate(req.createdAt)}</span></div>`;
+
+            if (req.status !== 'pending') tl += `<div class="timeline-item active"><strong>Staff Vector</strong><br><span style="color:var(--text-secondary);">Processed by faculty. ${req.staffRemarks ? `Note: ${req.staffRemarks}` : ''}</span></div>`;
+            if (req.status === 'approved') tl += `<div class="timeline-item active"><strong style="color:var(--badge-issued-color);">Admin Approved</strong><br><span style="color:var(--text-secondary);">Certificate hash finalized.</span></div>`;
+            else if (req.status === 'rejected') tl += `<div class="timeline-item active"><strong style="color:var(--btn-danger);">Admin Rejected</strong><br><span style="color:var(--text-secondary);">Remarks: ${req.adminRemarks}</span></div>`;
+            else tl += `<div class="timeline-item"><strong style="color:var(--text-tertiary);">Awaiting Final Adjudication</strong><br><span style="color:var(--text-tertiary);">Pending Admin logic.</span></div>`;
+            
+            tBox.innerHTML = tl;
+        };
+
+        // ------------------ VERIFY LOGIC ------------------
+        document.getElementById('verifyForm').onsubmit = function(e) {
+            e.preventDefault();
+            const certId = document.getElementById('certIdInput').value.trim();
+            const c = getAll('certificates').find(i => i.id === certId);
+            const res = document.getElementById('verifyResultBox');
+            res.style.display = 'block';
+
+            if (!c) {
+                res.innerHTML = `<div style="padding:20px; border:1px solid var(--btn-danger); background:#ffebee; color:var(--btn-danger); font-family:var(--font-mono); text-align:center;">ERROR 404: CERTIFICATE NOT FOUND IN REGISTRY</div>`;
+                return;
+            }
+
+            const stu = getById('students', c.studentId);
+            if (c.status === 'revoked') {
+                res.innerHTML = `<div style="padding:20px; border:1px solid var(--btn-danger); border-left:10px solid var(--btn-danger); background:#fff;">
+                    <h3 style="color:var(--btn-danger); font-family:var(--font-mono);">STATUS: REVOKED</h3>
+                    <p style="margin-top:10px;">The credential <span style="font-family:monospace;">${c.id}</span> issued to <strong style="color:var(--text-primary);">${getUserName(stu.userId)}</strong> has been cryptographically suspended by ${getUniversityName(c.universityId)}.</p>
+                </div>`;
+            } else {
+                res.innerHTML = `<div style="padding:20px; border:1px solid var(--badge-issued-color); border-left:10px solid var(--badge-issued-color); background:#fff;">
+                    <h3 style="color:var(--badge-issued-color); font-family:var(--font-mono);">STATUS: VALID AUTHENTICATED</h3>
+                    <div class="verify-result-grid" style="margin-top:20px; display:grid; grid-template-columns: 1fr 1fr; gap:20px; font-size:0.9rem;">
+                        <div><label>Issued To</label><div style="font-weight:600; color:var(--text-primary);">${getUserName(stu.userId)}</div></div>
+                        <div><label>University</label><div style="font-weight:600; color:var(--text-primary);">${getUniversityName(c.universityId)}</div></div>
+                        <div><label>Degree</label><div style="font-weight:600; color:var(--text-primary);">${getCourseTypeName(c.courseTypeId)}</div></div>
+                        <div><label>Type</label><div style="font-weight:600; color:var(--text-primary);">${getCertTypeName(c.certTypeId)}</div></div>
+                        <div><label>Issue Date</label><div style="font-weight:600; color:var(--text-primary);">${formatDate(c.issuedAt)}</div></div>
+                        <div><label>Registry Key</label><div style="font-family:monospace; font-size:0.8rem; background:var(--bg-secondary); padding:4px;">${c.id}</div></div>
+                    </div>
+                </div>`;
+            }
+        };
+    </script>
+</body>
+</html>

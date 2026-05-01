@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Degree Certificate Detail | CertVerify India</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body { background: var(--bg-tertiary); padding: 40px; font-family: 'IBM Plex Sans', sans-serif; }
+        .cert-aspect-ratio { width: 1122px; height: 793px; margin: 40px auto; background: #fff; border: 1px solid var(--text-primary); position: relative; overflow: hidden; }
+        .security-background { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.05; pointer-events: none; }
+        .cert-body { position: relative; z-index: 5; padding: 60px 100px; height: 100%; display: flex; flex-direction: column; text-align: center; }
+        .qr-anchor { position: absolute; bottom: 60px; right: 60px; }
+        .seal-anchor { position: absolute; bottom: 60px; left: 60px; text-align: left; }
+    </style>
+</head>
+<body>
+
+    <header style="max-width: 1122px; margin: 0 auto; display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 20px; border-bottom: 1px solid var(--text-primary);">
+        <div><p class="label">INDIAN_UNIVERSITY_SYSTEM</p><h3 style="font-size: 18px;">CERTVERIFY INDIA</h3></div>
+        <div style="display:flex; gap:10px;">
+            <button onclick="downloadPDF()" class="btn btn-primary" style="padding: 10px 20px; font-size: 10px;">DOWNLOAD AS PDF</button>
+            <button onclick="window.close()" class="btn btn-outline" style="padding: 10px 20px; font-size: 10px;">CLOSE WINDOW</button>
+        </div>
+    </header>
+
+    <main id="capture" class="cert-aspect-ratio">
+        <!-- Security Pattern -->
+        <div class="security-background">
+            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="black" stroke-width="0.5"/></pattern></defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+            </svg>
+        </div>
+
+        <div class="cert-body">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 50px;">
+                <div style="text-align: left;">
+                    <p class="label">ROLL NO. / ENROLLMENT</p>
+                    <p id="cEnroll" class="mono" style="font-weight:700;">2026IITB101</p>
+                </div>
+                <div style="text-align: right;">
+                    <p class="label">CERTIFICATE NUMBER</p>
+                    <p id="cId" class="mono" style="font-weight:700;">CERT-IITB-88209</p>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 40px;">
+                <p class="label" style="margin-bottom: 10px; color: var(--accent);">PROVISIONAL MARKSHEET & DEGREE</p>
+                <h1 id="cUniv" style="font-size: 40px; letter-spacing: -2px; line-height: 1; margin-bottom: 10px;">UNIVERSITY NAME</h1>
+                <p style="font-size: 14px; font-weight: 700; opacity: 0.5; letter-spacing: 0.1em;">GOVERNMENT AUTHORIZED INSTITUTE</p>
+            </div>
+
+            <div style="margin: 40px 0; border: 2px solid #000; padding: 40px;">
+                <p class="label" style="display: block; margin-bottom: 20px; font-size: 11px;">THIS IS TO CERTIFY THAT THE STUDENT NAMED BELOW</p>
+                <h2 id="cName" style="font-size: 52px; margin-bottom: 10px; letter-spacing: -3px; text-transform: uppercase;">ARYAN SHARMA</h2>
+                <div style="display: flex; justify-content: center; gap: 40px; margin: 20px 0;">
+                    <p style="font-size: 18px; font-weight: 600;">SON OF: <span id="cFather" style="text-transform: uppercase;">Mr. Rajesh Sharma</span></p>
+                </div>
+                <p style="font-size: 14px; font-weight: 700; opacity: 0.5; margin-bottom: 20px;">HAS SUCCESSFULLY COMPLETED ALL EXAMS FOR THE DEGREE OF</p>
+                <h2 id="cTitle" style="font-size: 32px; font-family:'Space Grotesk'; letter-spacing: -1px; text-transform: uppercase; border-bottom: 2px solid #000; display: inline-block; padding: 0 40px;">B.TECH COMPUTER SCIENCE</h2>
+            </div>
+
+            <div style="display: flex; justify-content: center; gap: 80px; margin-top: 40px;">
+                <div><p class="label">DATE OF ISSUE</p><p id="cDate" class="mono" style="font-size: 20px; font-weight: 800;">15/01/2026</p></div>
+                <div><p class="label">RESULT STATUS</p><p class="mono" style="font-size: 20px; font-weight: 800; color: var(--status-valid);">PASSED - FIRST CLASS ✓</p></div>
+            </div>
+
+            <div class="seal-anchor">
+                <div style="margin-bottom: 30px;">
+                    <p class="mono" style="font-size: 12px; font-weight: 800; border-top: 1px solid #000; display: inline-block; padding-top: 10px; padding-right: 40px;">CONTROLLER SIGNATURE</p>
+                </div>
+                <div>
+                    <p class="mono" style="font-size: 12px; font-weight: 800; border-top: 1px solid #000; display: inline-block; padding-top: 10px; padding-right: 40px;">REGISTRAR OFFICE SEAL</p>
+                </div>
+            </div>
+
+            <div class="qr-anchor">
+                <div id="qrcode" style="border:1px solid #000; padding:10px; background: #fff;"></div>
+                <p style="font-size: 8px; font-weight: 800; margin-top: 10px; text-align: center; letter-spacing: 0.1em;">SCAN TO VERIFY</p>
+            </div>
+
+            <div style="position: absolute; bottom: 0; left: 0; width: 100%; padding: 15px; border-top: 1px solid #eee; background: #fafafa; text-align: center;">
+                <p class="mono" style="font-size: 8px; opacity: 0.4; letter-spacing: 0.05em;">Verify this certificate at: certverify.gvcs.in/verify.html</p>
+            </div>
+        </div>
+    </main>
+
+    <script src="assets/js/storage.js"></script>
+    <script>
+        const id = new URLSearchParams(window.location.search).get('id');
+        const certs = Storage.get('certificates');
+        const students = Storage.get('students');
+        const cert = certs.find(c => c.id === id);
+
+        if (cert) {
+            const stu = students.find(s => s.id === cert.student_id);
+            document.getElementById('cId').textContent = cert.id;
+            document.getElementById('cName').textContent = cert.studentName;
+            document.getElementById('cTitle').textContent = cert.title;
+            document.getElementById('cUniv').textContent = cert.universityName.toUpperCase();
+            document.getElementById('cDate').textContent = cert.issue_date;
+            document.getElementById('cEnroll').textContent = cert.student_id;
+            document.getElementById('cFather').textContent = stu ? `Mr. ${stu.fatherName}` : 'N/A';
+
+            const qrUrl = `${window.location.origin}/verify.html?id=${cert.id}`;
+            new QRCode(document.getElementById("qrcode"), { text: qrUrl, width: 90, height: 90 });
+        } else {
+            document.body.innerHTML = '<div style="padding:100px; text-align:center; font-family:\'Space Grotesk\';">ERROR: RECORD NOT FOUND</div>';
+        }
+
+        async function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const capture = document.getElementById('capture');
+            const canvas = await html2canvas(capture, { scale: 2 });
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4'); 
+            const imgProps = pdf.getImageProperties(imgData);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`${id}-degree-certificate.pdf`);
+        }
+    </script>
+</body>
+</html>

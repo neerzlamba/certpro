@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff | Superadmin | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Global Staff Registry</h1>
+                <button class="btn btn-primary" onclick="openStaffModal()">Register Staff Mamber</button>
+            </div>
+
+            <div class="card" style="margin-bottom: 20px;">
+                <input type="text" id="searchInput" placeholder="Search by name or email..." style="max-width:300px;" oninput="loadData()">
+            </div>
+
+            <div class="card">
+                <div id="staffTable"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Staff Modal -->
+    <div id="staffModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Register Staff</h2>
+                <button class="modal-close" onclick="closeModal('staffModal')">✕</button>
+            </div>
+            <form id="staffForm">
+                <input type="hidden" id="staffId">
+                <input type="hidden" id="userId">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="stfName" required>
+                </div>
+                <div class="form-group">
+                    <label>Email Access</label>
+                    <input type="email" id="stfEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Password (Auto-generated if empty)</label>
+                    <input type="password" id="stfPassword">
+                </div>
+                <div class="form-group">
+                    <label>Assign to University</label>
+                    <select id="stfUniversity" required>
+                        <!-- Filled by JS -->
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" style="color:var(--text-main); border:1px solid #ccc; background:#fff" onclick="closeModal('staffModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRole('superadmin');
+        let allStaffRecords = [];
+
+        if (session) {
+            renderNav('superadmin');
+            loadDropdowns();
+            loadData();
+        }
+
+        function loadDropdowns() {
+            const unis = getAll('universities').filter(u => u.status === 'active');
+            let uHtml = '<option value="">Select University...</option>';
+            unis.forEach(u => uHtml += `<option value="${u.id}">${u.name}</option>`);
+            document.getElementById('stfUniversity').innerHTML = uHtml;
+        }
+
+        function loadData() {
+            allStaffRecords = getAll('staff');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            
+            const users = getAll('users');
+            
+            let filtered = [];
+            allStaffRecords.forEach(stf => {
+                const u = users.find(x => x.id === stf.userId);
+                if (!u) return; // Broken reference
+                
+                const matchSearch = u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search);
+                
+                if (matchSearch) {
+                    filtered.push({ stf, user: u });
+                }
+            });
+            
+            const headers = ['Name', 'Email', 'University', 'Status', 'Actions'];
+            const rows = filtered.map(data => {
+                return [
+                    data.user.name,
+                    data.user.email,
+                    getUniversityName(data.stf.universityId),
+                    getStatusBadge(data.user.status),
+                    `<button class="btn btn-primary" style="padding:4px 8px;font-size:0.8rem;margin-right:5px;" onclick="openStaffModal('${data.stf.id}')">Edit</button>` +
+                    `<button class="btn btn-danger" style="padding:4px 8px;font-size:0.8rem;" onclick="deleteStaff('${data.stf.id}', '${data.user.id}')">Delete</button>`
+                ];
+            });
+            renderTable('staffTable', headers, rows);
+        }
+
+        window.deleteStaff = function(sId, uId) {
+            confirmDelete("Delete this staff profile and user account completely?", () => {
+                remove('staff', sId);
+                remove('users', uId);
+                toast("Staff profile deleted", "success");
+                loadData();
+            });
+        }
+
+        window.openStaffModal = function(id = null) {
+            document.getElementById('staffForm').reset();
+            document.getElementById('staffId').value = '';
+            document.getElementById('userId').value = '';
+            document.getElementById('modalTitle').innerText = 'Register Staff';
+            
+            if (id) {
+                document.getElementById('modalTitle').innerText = 'Edit Staff';
+                const stf = getById('staff', id);
+                if (stf) {
+                    const u = getById('users', stf.userId);
+                    document.getElementById('staffId').value = stf.id;
+                    document.getElementById('userId').value = u.id;
+                    document.getElementById('stfName').value = u ? u.name : '';
+                    document.getElementById('stfEmail').value = u ? u.email : '';
+                    document.getElementById('stfUniversity').value = stf.universityId;
+                }
+            }
+            openModal('staffModal');
+        }
+
+        document.getElementById('staffForm').onsubmit = function(e) {
+            e.preventDefault();
+            const sId = document.getElementById('staffId').value;
+            const uId = document.getElementById('userId').value;
+            let pwd = document.getElementById('stfPassword').value;
+            const uniId = document.getElementById('stfUniversity').value;
+            
+            if (sId && uId) { // Edit
+                const userChanges = {
+                    name: document.getElementById('stfName').value,
+                    email: document.getElementById('stfEmail').value,
+                    universityId: uniId
+                };
+                if (pwd) userChanges.password = pwd;
+                update('users', uId, userChanges);
+                
+                const stfChanges = {
+                    universityId: uniId
+                };
+                update('staff', sId, stfChanges);
+                toast("Staff updated");
+            } else { // Create
+                const newUserId = generateId('USR');
+                const userObj = {
+                    id: newUserId,
+                    name: document.getElementById('stfName').value,
+                    email: document.getElementById('stfEmail').value,
+                    password: pwd || 'pass123',
+                    role: 'staff',
+                    universityId: uniId,
+                    status: 'active',
+                    createdAt: new Date().toISOString().split('T')[0]
+                };
+                create('users', userObj);
+
+                const stfObj = {
+                    id: generateId('STA'),
+                    userId: newUserId,
+                    universityId: uniId,
+                    status: 'active'
+                };
+                create('staff', stfObj);
+                toast("Staff registered");
+            }
+            closeModal('staffModal');
+            loadData();
+        }
+    </script>
+</body>
+</html>

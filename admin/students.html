@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Students | Admin | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">My Students</h1>
+                <button class="btn btn-primary" onclick="openStudentModal()">Add Student</button>
+            </div>
+
+            <div class="card" style="margin-bottom: 20px;">
+                <input type="text" id="searchInput" placeholder="Search by name or email..." style="max-width:300px;" oninput="loadData()">
+            </div>
+
+            <div class="card">
+                <div id="studentTable"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Student Modal -->
+    <div id="studentModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Register Student</h2>
+                <button class="modal-close" onclick="closeModal('studentModal')">✕</button>
+            </div>
+            <form id="studentForm">
+                <input type="hidden" id="studentId">
+                <input type="hidden" id="userId">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="stuName" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="stuEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Password (Auto-generated if empty)</label>
+                    <input type="password" id="stuPassword">
+                </div>
+                <div class="form-group">
+                    <label>Phone Contact</label>
+                    <input type="text" id="stuPhone" required>
+                </div>
+                <div class="form-group">
+                    <label>Enrolled Course</label>
+                    <select id="stuCourses" required>
+                        <option value="">Select a Course...</option>
+                        <!-- Filled by JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Admission Year</label>
+                    <input type="number" id="stuAdmYear" required value="${new Date().getFullYear()}">
+                </div>
+                <div class="form-group">
+                    <label>Profile Bio</label>
+                    <textarea id="stuBio"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" style="color:var(--text-main); border:1px solid #ccc; background:#fff" onclick="closeModal('studentModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Details</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRoles(['admin']);
+        let myStudents = [];
+
+        if (session) {
+            renderNav('admin');
+            loadDropdowns();
+            loadData();
+            if(!hasPermission('manage_students')) {
+                const btn = document.querySelector('button[onclick="openStudentModal()"]');
+                if (btn) btn.style.display = 'none';
+            }
+        }
+
+        function loadDropdowns() {
+            const courses = getAll('courseTypes').filter(c => c.status === 'active');
+            let cHtml = '<option value="">Select a Course...</option>';
+            courses.forEach(c => cHtml += `<option value="${c.id}">${c.name}</option>`);
+            document.getElementById('stuCourses').innerHTML = cHtml;
+        }
+
+        function loadData() {
+            myStudents = getAll('students').filter(s => s.universityId === session.universityId);
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const users = getAll('users');
+            
+            let filtered = [];
+            myStudents.forEach(stu => {
+                const u = users.find(x => x.id === stu.userId);
+                if (!u) return;
+                
+                if (u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search)) {
+                    filtered.push({ stu, user: u });
+                }
+            });
+            
+            const headers = ['Name', 'Email', 'Enrolled Courses', 'Phone', 'Status', 'Actions'];
+            const rows = filtered.map(data => {
+                const coursesIds = data.stu.enrolledCourseTypeIds || [];
+                const courseNames = coursesIds.map(id => getCourseTypeName(id)).join(',<br>');
+
+                let actionHtml = `<div style="display:flex;gap:4px;">`;
+                if(hasPermission('manage_students')) {
+                    actionHtml += `<button class="btn btn-primary" style="padding:3px 6px;font-size:0.75rem;" onclick="openStudentModal('${data.stu.id}')"><i data-lucide="edit-3" style="width:12px;height:12px;"></i></button>`;
+                }
+                if(hasPermission('reset_password')) {
+                    actionHtml += `<button class="btn" style="padding:3px 6px;font-size:0.75rem;background:var(--bg-tertiary);border:1px solid var(--border-color);" onclick="resetStuPwd('${data.user.id}')" title="Reset Password"><i data-lucide="key" style="width:12px;height:12px;"></i></button>`;
+                }
+                if(data.user.status === 'blocked') {
+                    if(hasPermission('block_user')) {
+                        actionHtml += `<button class="btn btn-success" style="padding:3px 6px;font-size:0.75rem;" onclick="toggleStuBlock('${data.user.id}', 'active')" title="Unblock"><i data-lucide="check" style="width:12px;height:12px;"></i></button>`;
+                    }
+                } else {
+                    if(hasPermission('block_user')) {
+                        actionHtml += `<button class="btn" style="padding:3px 6px;font-size:0.75rem;background:#f57c00;color:#fff;" onclick="toggleStuBlock('${data.user.id}', 'blocked')" title="Block"><i data-lucide="shield-off" style="width:12px;height:12px;"></i></button>`;
+                    }
+                }
+                if(hasPermission('delete_user')) {
+                    actionHtml += `<button class="btn btn-danger" style="padding:3px 6px;font-size:0.75rem;" onclick="deleteStudent('${data.stu.id}', '${data.user.id}')"><i data-lucide="trash-2" style="width:12px;height:12px;"></i></button>`;
+                }
+                actionHtml += `</div>`;
+
+                return [
+                    data.user.name,
+                    data.user.email,
+                    courseNames,
+                    data.stu.phone,
+                    getStatusBadge(data.user.status),
+                    actionHtml
+                ];
+            });
+            renderTable('studentTable', headers, rows);
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        window.toggleStuBlock = function(uId, status) {
+            if(!hasPermission('block_user')) return toast('Permission Denied', 'error');
+            const reason = (status === 'blocked') ? window.prompt("Enter reason for blocking student:") : "";
+            if(status === 'blocked' && reason === null) return;
+            update('users', uId, { status, statusReason: reason });
+            toast(`Student ${status === 'blocked' ? 'blocked' : 'unblocked'}`);
+            loadData();
+        }
+
+        window.resetStuPwd = function(uId) {
+            if(!hasPermission('reset_password')) return toast('Permission Denied', 'error');
+            const newPwd = window.prompt("Enter new password for this student:", "pass123");
+            if(newPwd === null) return;
+            update('users', uId, { password: newPwd });
+            logAction('RESET_STUDENT_PASSWORD', uId, 'Admin reset student password');
+            toast("Password reset successful", "success");
+        }
+
+        window.deleteStudent = function(stuId, userId) {
+            if(!hasPermission('delete_user')) return toast('Permission Denied', 'error');
+            confirmDelete("Delete this student profile and linked account from your university?", () => {
+                remove('students', stuId);
+                remove('users', userId);
+                logAction('DELETE_STUDENT', stuId, 'Deleted student account and associated record');
+                toast("Student deleted");
+                loadData();
+            });
+        }
+
+        window.openStudentModal = function(id = null) {
+            if(!hasPermission('manage_students')) return toast('Permission Denied', 'error');
+            document.getElementById('studentForm').reset();
+            document.getElementById('studentId').value = '';
+            document.getElementById('userId').value = '';
+            document.getElementById('modalTitle').innerText = 'Register Student';
+            document.getElementById('stuCourses').value = '';
+            
+            if (id) {
+                document.getElementById('modalTitle').innerText = 'Edit Student';
+                const stu = getById('students', id);
+                if (stu && stu.universityId === session.universityId) {
+                    const u = getById('users', stu.userId);
+                    document.getElementById('studentId').value = stu.id;
+                    document.getElementById('userId').value = u.id;
+                    document.getElementById('stuName').value = u ? u.name : '';
+                    document.getElementById('stuEmail').value = u ? u.email : '';
+                    
+                    document.getElementById('stuPhone').value = stu.phone;
+                    document.getElementById('stuBio').value = stu.bio || '';
+                    document.getElementById('stuAdmYear').value = stu.admYear || new Date().getFullYear();
+                    document.getElementById('stuCourses').value = (stu.enrolledCourseTypeIds && stu.enrolledCourseTypeIds.length > 0) ? stu.enrolledCourseTypeIds[0] : '';
+                }
+            }
+            openModal('studentModal');
+        }
+
+        document.getElementById('studentForm').onsubmit = function(e) {
+            e.preventDefault();
+            const sId = document.getElementById('studentId').value;
+            const uId = document.getElementById('userId').value;
+            let pwd = document.getElementById('stuPassword').value;
+            
+            const selectedCourseId = document.getElementById('stuCourses').value;
+            const selectedCourses = selectedCourseId ? [selectedCourseId] : [];
+            
+            if (sId && uId) { // Edit
+                const userChanges = {
+                    name: document.getElementById('stuName').value,
+                    email: document.getElementById('stuEmail').value
+                };
+                if (pwd) userChanges.password = pwd;
+                update('users', uId, userChanges);
+                
+                const stuChanges = {
+                    phone: document.getElementById('stuPhone').value,
+                    enrolledCourseTypeIds: selectedCourses,
+                    admYear: document.getElementById('stuAdmYear').value,
+                    bio: document.getElementById('stuBio').value
+                };
+                update('students', sId, stuChanges);
+                logAction('UPDATE_STUDENT', sId, `Updated student profile for user ${uId}`);
+                toast("Student updated");
+            } else { // Create
+                const newUserId = generateId('USR');
+                const userObj = {
+                    id: newUserId,
+                    name: document.getElementById('stuName').value,
+                    email: document.getElementById('stuEmail').value,
+                    password: pwd || 'pass123',
+                    role: 'student',
+                    universityId: session.universityId,
+                    status: 'active',
+                    createdAt: new Date().toISOString().split('T')[0]
+                };
+                create('users', userObj);
+
+                const enrollYear = document.getElementById('stuAdmYear').value;
+                const rollNo = generateRollNo(session.universityId, selectedCourseId, enrollYear);
+
+                const stuObj = {
+                    id: generateId('STU'),
+                    userId: newUserId,
+                    universityId: session.universityId,
+                    enrolledCourseTypeIds: selectedCourses,
+                    rollNo: rollNo,
+                    admYear: enrollYear,
+                    phone: document.getElementById('stuPhone').value,
+                    bio: document.getElementById('stuBio').value,
+                    status: 'active'
+                };
+                create('students', stuObj);
+                logAction('CREATE_STUDENT', stuObj.id, `Created new student ${rollNo} for user ${newUserId}`);
+                toast("Student registered with Roll No: " + rollNo);
+            }
+            closeModal('studentModal');
+            loadData();
+        }
+    </script>
+</body>
+</html>

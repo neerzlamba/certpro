@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700;800;900&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Code+Pro:wght@400;600;700&display=swap');
+
+:root {
+  /* BACKGROUND STEPS */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #f1f5f9;
+  
+  /* TEXT PALETTE */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #94a3b8;
+  
+  /* CORE ACCENT */
+  --accent: #2563eb;
+  --border: #e2e8f0;
+  
+  /* STATUS COLORS */
+  --status-valid: #16a34a;
+  --status-revoked: #e11d48;
+  --status-tampered: #d97706;
+  --status-pending: #475569;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border-radius: 0 !important; /* STRICT: AVOID RADIUS */
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'IBM Plex Sans', sans-serif;
+  line-height: 1.5;
+  font-size: 16px;
+}
+
+/* TYPOGRAPHY SCALE (Archetype 4) */
+h1, .h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 900; font-size: 3.5rem; letter-spacing: -0.04em; line-height: 1; text-transform: uppercase; margin-bottom: 1rem; }
+h2, .h2 { font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 2.5rem; letter-spacing: -0.03em; line-height: 1.1; text-transform: uppercase; }
+h3, .h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: -0.02em; text-transform: uppercase; }
+
+.label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: var(--text-tertiary); margin-bottom: 0.5rem; display: block; }
+.mono { font-family: 'Source Code Pro', monospace; font-size: 0.875rem; }
+
+/* CONTROL ROOM GRID */
+.grid-container {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;
+}
+
+.grid-sidebar {
+  border-right: 1px solid var(--border);
+  background: var(--bg-primary);
+  padding: 60px 40px;
+}
+
+.grid-main {
+  padding: 80px 100px;
+}
+
+/* DENSE BORDER SYSTEM */
+.bordered { border: 1px solid var(--border); }
+.border-b { border-bottom: 1px solid var(--border); }
+.border-r { border-right: 1px solid var(--border); }
+
+/* SIDEBAR NAVIGATION */
+.nav-link {
+  display: block; font-size: 0.8125rem; font-weight: 700; text-transform: uppercase;
+  color: var(--text-secondary); text-decoration: none; padding: 16px; 
+  border: 1px solid transparent; margin-bottom: -1px;
+}
+.nav-link:hover, .nav-link.active {
+  color: var(--text-primary); border: 1px solid var(--border); background: var(--bg-secondary);
+}
+
+/* HIGH-CONTRAST COMPONENTS */
+.btn {
+  display: inline-block; padding: 12px 24px; font-size: 0.75rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; text-decoration: none;
+  border: 1px solid var(--text-primary); transition: all 0.15s;
+}
+.btn-primary { background: var(--text-primary); color: #fff; }
+.btn-outline { background: transparent; color: var(--text-primary); }
+.btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* STATUS BADGES (Rectangular) */
+.badge { display: inline-block; padding: 6px 12px; font-size: 0.625rem; font-weight: 800; text-transform: uppercase; border: 1px solid var(--border); }
+.badge-valid { border-color: var(--status-valid); color: var(--status-valid); }
+.badge-revoked { border-color: var(--status-revoked); color: var(--status-revoked); }
+.badge-tampered { border-color: var(--status-tampered); color: var(--status-tampered); }
+
+/* DATA TABLES */
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 20px; font-size: 0.6875rem; font-weight: 800; color: var(--text-tertiary); border-bottom: 2px solid var(--text-primary); text-transform: uppercase; letter-spacing: 0.1em; }
+td { padding: 20px; border-bottom: 1px solid var(--border); font-size: 0.875rem; font-weight: 500; }
+tr:hover td { background: var(--bg-secondary); }
+
+/* FORM ELEMENTS */
+.form-group { margin-bottom: 2rem; }
+input, select, textarea {
+  width: 100%; padding: 12px 16px; border: 1px solid var(--border); font-family: inherit; font-size: 0.875rem;
+  background: var(--bg-primary); transition: all 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none; border-color: var(--accent); background: var(--bg-secondary);
+}
+
+/* STAT WIDGETS */
+.stat-box { padding: 30px; border: 1px solid var(--border); background: var(--bg-primary); }
+.stat-value { font-family: 'Source Code Pro', monospace; font-size: 3rem; font-weight: 700; color: var(--text-primary); }
+
+@media (max-width: 1024px) {
+  .grid-container { grid-template-columns: 1fr; }
+  .grid-sidebar { display: none; }
+  .grid-main { padding: 40px; }
+}

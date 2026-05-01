@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Staff | Admin | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">University Staff</h1>
+                <button class="btn btn-primary" onclick="openStaffModal()">Add Staff Member</button>
+            </div>
+
+            <div class="card" style="margin-bottom: 20px;">
+                <input type="text" id="searchInput" placeholder="Search by name or email..." style="max-width:300px;" oninput="loadData()">
+            </div>
+
+            <div class="card">
+                <div id="staffTable"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Staff Modal -->
+    <div id="staffModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Register Staff</h2>
+                <button class="modal-close" onclick="closeModal('staffModal')">✕</button>
+            </div>
+            <form id="staffForm">
+                <input type="hidden" id="staffId">
+                <input type="hidden" id="userId">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="stfName" required>
+                </div>
+                <div class="form-group">
+                    <label>Email Access</label>
+                    <input type="email" id="stfEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Password (Auto-generated if empty)</label>
+                    <input type="password" id="stfPassword">
+                </div>
+                <div class="form-group">
+                    <label>Designation</label>
+                    <input type="text" id="stfDesig" required placeholder="e.g. Registrar, HOD">
+                </div>
+                <div class="form-group">
+                    <label>Department</label>
+                    <input type="text" id="stfDept" placeholder="e.g. Academic, IT">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" style="color:var(--text-main); border:1px solid #ccc; background:#fff" onclick="closeModal('staffModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRoles(['admin']);
+        let myStaffRecords = [];
+
+        if (session) {
+            renderNav('admin');
+            loadData();
+            if(!hasPermission('manage_staff')) {
+                const btn = document.querySelector('button[onclick="openStaffModal()"]');
+                if (btn) btn.style.display = 'none';
+            }
+        }
+
+        function loadData() {
+            myStaffRecords = getAll('staff').filter(s => s.universityId === session.universityId);
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            
+            const users = getAll('users');
+            
+            let filtered = [];
+            myStaffRecords.forEach(stf => {
+                const u = users.find(x => x.id === stf.userId);
+                if (!u) return;
+                
+                if (u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search)) {
+                    filtered.push({ stf, user: u });
+                }
+            });
+            
+            const headers = ['Name', 'Email', 'Status', 'Actions'];
+            const rows = filtered.map(data => {
+                let actionHtml = `<div style="display:flex;gap:4px;">`;
+                if(hasPermission('manage_staff')) {
+                    actionHtml += `<button class="btn btn-primary" style="padding:3px 6px;font-size:0.75rem;" onclick="openStaffModal('${data.stf.id}')"><i data-lucide="edit-3" style="width:12px;height:12px;"></i></button>`;
+                }
+                if(hasPermission('reset_password')) {
+                    actionHtml += `<button class="btn" style="padding:3px 6px;font-size:0.75rem;background:var(--bg-tertiary);border:1px solid var(--border-color);" onclick="resetStfPwd('${data.user.id}')" title="Reset Password"><i data-lucide="key" style="width:12px;height:12px;"></i></button>`;
+                }
+                if(data.user.status === 'blocked') {
+                    if(hasPermission('block_user')) {
+                        actionHtml += `<button class="btn btn-success" style="padding:3px 6px;font-size:0.75rem;" onclick="toggleStfBlock('${data.user.id}', 'active')" title="Unblock"><i data-lucide="check" style="width:12px;height:12px;"></i></button>`;
+                    }
+                } else {
+                    if(hasPermission('block_user')) {
+                        actionHtml += `<button class="btn" style="padding:3px 6px;font-size:0.75rem;background:#f57c00;color:#fff;" onclick="toggleStfBlock('${data.user.id}', 'blocked')" title="Block"><i data-lucide="shield-off" style="width:12px;height:12px;"></i></button>`;
+                    }
+                }
+                if(hasPermission('delete_user')) {
+                    actionHtml += `<button class="btn btn-danger" style="padding:3px 6px;font-size:0.75rem;" onclick="deleteStaff('${data.stf.id}', '${data.user.id}')"><i data-lucide="trash-2" style="width:12px;height:12px;"></i></button>`;
+                }
+                actionHtml += `</div>`;
+
+                return [
+                    data.user.name,
+                    data.user.email,
+                    getStatusBadge(data.user.status),
+                    actionHtml
+                ];
+            });
+            renderTable('staffTable', headers, rows);
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        window.toggleStfBlock = function(uId, status) {
+            if(!hasPermission('block_user')) return toast('Permission Denied', 'error');
+            const reason = (status === 'blocked') ? window.prompt("Enter reason for blocking:") : "";
+            if(status === 'blocked' && reason === null) return;
+            update('users', uId, { status, statusReason: reason });
+            toast(`Staff member ${status === 'blocked' ? 'blocked' : 'unblocked'}`);
+            loadData();
+        }
+
+        window.resetStfPwd = function(uId) {
+            if(!hasPermission('reset_password')) return toast('Permission Denied', 'error');
+            const newPwd = window.prompt("Enter new password for this user:", "pass123");
+            if(newPwd === null) return;
+            update('users', uId, { password: newPwd });
+            logAction('RESET_STAFF_PWD', uId, 'Password reset by admin');
+            toast("Password reset successful", "success");
+        }
+
+        window.deleteStaff = function(sId, uId) {
+            if(!hasPermission('delete_user')) return toast('Permission Denied', 'error');
+            confirmDelete("Delete this staff profile? They will no longer have access to the system.", () => {
+                remove('staff', sId);
+                remove('users', uId);
+                logAction('DELETE_STAFF', sId, 'Deleted staff account and associated record');
+                toast("Staff profile deleted");
+                loadData();
+            });
+        }
+
+        window.openStaffModal = function(id = null) {
+            if(!hasPermission('manage_staff')) return toast('Universal Roles restrict this account from managing staff members.', 'error');
+            document.getElementById('staffForm').reset();
+            document.getElementById('staffId').value = '';
+            document.getElementById('userId').value = '';
+            document.getElementById('modalTitle').innerText = 'Register Staff Member';
+            
+            if (id) {
+                document.getElementById('modalTitle').innerText = 'Edit Staff Member';
+                const stf = getById('staff', id);
+                if (stf && stf.universityId === session.universityId) {
+                    const u = getById('users', stf.userId);
+                    document.getElementById('staffId').value = stf.id;
+                    document.getElementById('userId').value = u.id;
+                    document.getElementById('stfName').value = u ? u.name : '';
+                    document.getElementById('stfEmail').value = u ? u.email : '';
+                    document.getElementById('stfDesig').value = stf.designation || '';
+                    document.getElementById('stfDept').value = stf.department || '';
+                }
+            }
+            openModal('staffModal');
+        }
+
+        document.getElementById('staffForm').onsubmit = function(e) {
+            e.preventDefault();
+            const sId = document.getElementById('staffId').value;
+            const uId = document.getElementById('userId').value;
+            let pwd = document.getElementById('stfPassword').value;
+            
+            if (sId && uId) { // Edit
+                const userChanges = {
+                    name: document.getElementById('stfName').value,
+                    email: document.getElementById('stfEmail').value
+                };
+                if (pwd) userChanges.password = pwd;
+                update('users', uId, userChanges);
+                
+                const staffChanges = {
+                    designation: document.getElementById('stfDesig').value,
+                    department: document.getElementById('stfDept').value
+                };
+                update('staff', sId, staffChanges);
+                logAction('UPDATE_STAFF', sId, `Updated profile for user ${uId}`);
+                toast("Staff updated");
+            } else { // Create
+                const newUserId = generateId('USR');
+                const userObj = {
+                    id: newUserId,
+                    name: document.getElementById('stfName').value,
+                    email: document.getElementById('stfEmail').value,
+                    password: pwd || 'pass123',
+                    role: 'staff',
+                    universityId: session.universityId,
+                    status: 'active',
+                    createdAt: new Date().toISOString().split('T')[0]
+                };
+                create('users', userObj);
+
+                const stfObj = {
+                    id: generateId('STA'),
+                    userId: newUserId,
+                    universityId: session.universityId,
+                    empId: generateEmpId(session.universityId),
+                    designation: document.getElementById('stfDesig').value,
+                    department: document.getElementById('stfDept').value,
+                    status: 'active'
+                };
+                create('staff', stfObj);
+                logAction('CREATE_STAFF', stfObj.id, `Created new staff ${stfObj.empId} for user ${newUserId}`);
+                toast("Staff registered with ID: " + stfObj.empId);
+            }
+            closeModal('staffModal');
+            loadData();
+        }
+    </script>
+</body>
+</html>

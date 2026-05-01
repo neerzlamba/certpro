@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Verify | CertPro.io</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body class="layout">
+
+    <div id="sidebarContainer"></div>
+    <div id="toastContainer" class="toast-container"></div>
+
+    <main class="main-content">
+        <header style="margin-bottom: 60px;">
+            <p class="label">Internal Validation Tool</p>
+            <h1>Quick Verify</h1>
+            <p style="color: var(--text-muted);">Instantly check any certificate ID to see if it belongs to your college database.</p>
+        </header>
+
+        <div class="card" style="max-width: 600px; border-radius: 0;">
+            <p class="label">Enter Certificate ID</p>
+            <form id="checkForm">
+                <input type="text" id="checkId" placeholder="e.g. CERT-V10-101" required style="font-size: 1.5rem; margin-bottom: 24px; border-radius: 0;">
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 18px; border-radius: 0;">Execute Search</button>
+            </form>
+
+            <div id="resultView" class="card" style="margin-top: 40px; display: none; background: var(--surface-light); border-radius: 0;">
+                <div id="resStatus" class="badge" style="margin-bottom: 24px; border-radius: 0;">Waiting...</div>
+                <div id="resDetails">
+                    <!-- Rendered via JS -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Core Scripts -->
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/utils.js"></script>
+
+    <script>
+        // 1. Guard & Sidebar
+        const session = Auth.guardPage('staff');
+        if (session) {
+            Utils.renderSidebar('staff', 'verify');
+        }
+
+        // 2. Verification Logic
+        document.getElementById('checkForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('checkId').value.trim().toUpperCase();
+            const cert = DB.getById('certificates', id);
+            const view = document.getElementById('resultView');
+            const resStatus = document.getElementById('resStatus');
+            const resDetails = document.getElementById('resDetails');
+
+            view.style.display = 'block';
+
+            if (cert) {
+                const isMyUni = cert.universityId === session.universityId;
+
+                if (!isMyUni) {
+                    resStatus.className = "badge badge-pending";
+                    resStatus.textContent = "External College Record";
+                    resDetails.innerHTML = `<p style="opacity:0.4; font-size:12px;">This record belongs to another institution.<br>Name: <b>${cert.studentName}</b></p>`;
+                } else {
+                    resStatus.className = `badge ${cert.status === 'issued' ? 'badge-success' : 'badge-danger'}`;
+                    resStatus.textContent = cert.status === 'issued' ? 'Verified Valid ✓' : 'Record Revoked ✕';
+                    resDetails.innerHTML = `
+                        <div style="margin-bottom:12px;"><label class="label">Holder Name</label><p style="font-weight:700;">${cert.studentName}</p></div>
+                        <div style="margin-bottom:12px;"><label class="label">Program Type</label><p style="font-size:13px;">${cert.title}</p></div>
+                        <div style="font-size:10px; opacity:0.4;" class="mono">Signed on: ${new Date(cert.issuedAt).toLocaleString()}</div>
+                    `;
+                }
+            } else {
+                resStatus.className = "badge badge-danger";
+                resStatus.textContent = "ID Not Found";
+                resDetails.innerHTML = `<p style="opacity:0.4; font-size:11px;">The provided ID is not present in the global ledger.</p>`;
+            }
+        });
+    </script>
+
+</body>
+</html>

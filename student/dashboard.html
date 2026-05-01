@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Welcome <span id="stuNameLabel"></span></h1>
+            </div>
+
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <h3 style="color:var(--badge-issued-color);">My Certificates</h3>
+                    <div class="value" id="count-certs">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3 style="color:var(--badge-pending-color);">Pending Requests</h3>
+                    <div class="value" id="count-pending">0</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 style="font-size:1.1rem; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">Recent Certificates</h2>
+                <div id="table-recent"></div>
+            </div>
+            
+        </main>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRoles(['student']);
+        let studentRecord = null;
+
+        if (session) {
+            renderNav('student');
+            document.getElementById('stuNameLabel').innerText = getUserName(session.userId);
+            loadDashboard();
+        }
+
+        function loadDashboard() {
+            const students = getAll('students');
+            studentRecord = students.find(s => s.userId === session.userId);
+            if (!studentRecord) return;
+
+            const myCerts = getAll('certificates').filter(c => c.studentId === studentRecord.id);
+            const myReqs = getAll('requests').filter(r => r.studentId === studentRecord.id && (r.status === 'pending' || r.status === 'forwarded'));
+
+            document.getElementById('count-certs').innerText = myCerts.length;
+            document.getElementById('count-pending').innerText = myReqs.length;
+
+            const recent = myCerts
+                .sort((a,b) => new Date(b.issuedAt) - new Date(a.issuedAt))
+                .slice(0, 3);
+            
+            const headers = ['Cert ID', 'Course Type', 'Status', 'Date'];
+            const rows = recent.map(c => [
+                c.id,
+                getCourseTypeName(c.courseTypeId),
+                getStatusBadge(c.status),
+                formatDate(c.issuedAt)
+            ]);
+            renderTable('table-recent', headers, rows);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Requests | Staff | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Pending Student Requests</h1>
+            </div>
+
+            <div class="card" style="margin-bottom: 20px;">
+                <input type="text" id="searchInput" placeholder="Search by student name..." style="max-width:300px;" oninput="applyFilters()">
+            </div>
+
+            <div class="card">
+                <div id="requestsTable"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Forward Modal -->
+    <div id="forwardModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Forward to University Admin</h2>
+                <button class="modal-close" onclick="closeModal('forwardModal')">✕</button>
+            </div>
+            <form id="forwardForm">
+                <input type="hidden" id="reqIdToForward">
+                <div class="form-group">
+                    <label>Edit Request Reason (Optional)</label>
+                    <textarea id="editReason"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Staff Remarks</label>
+                    <textarea id="staffRemarks" required placeholder="Add your notes before forwarding..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" style="color:var(--text-main); border:1px solid #ccc; background:#fff" onclick="closeModal('forwardModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save & Forward Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRoles(['staff']);
+        let pendingRequests = [];
+
+        if (session) {
+            renderNav('staff');
+            loadData();
+        }
+
+        function loadData() {
+            pendingRequests = getAll('requests').filter(r => r.universityId === session.universityId && r.status === 'pending');
+            // Sort oldest first (FIFO processing)
+            pendingRequests.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            
+            let filtered = pendingRequests.filter(r => {
+                const stu = getById('students', r.studentId);
+                const sName = stu ? getUserName(stu.userId).toLowerCase() : '';
+                return sName.includes(search);
+            });
+            
+            const headers = ['Tracking ID', 'Student', 'Requested Course', 'Reason', 'Date', 'Actions'];
+            const rows = filtered.map(r => {
+                const s = getById('students', r.studentId);
+                const sName = s ? getUserName(s.userId) : 'Unknown';
+                
+                let actionHtml = '';
+                if(hasPermission('forward_request')) {
+                    actionHtml = `<button class="btn btn-primary" style="padding:4px 8px;font-size:0.8rem;" onclick="openForwardModal('${r.id}')">Edit & Forward</button>`;
+                }
+                
+                return [
+                    `<div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-family:monospace;font-size:0.8rem">${r.id}</span>
+                        <button class="btn" style="padding:2px 6px;font-size:0.7rem;background:var(--bg-secondary);color:var(--text-primary);" title="Copy ID" onclick="copyText('${r.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+                    </div>`,
+                    sName,
+                    getCourseTypeName(r.courseTypeId),
+                    `<span title="${r.reason}">${r.reason.substring(0, 40)}${r.reason.length > 40 ? '...' : ''}</span>`,
+                    formatDate(r.createdAt),
+                    actionHtml
+                ];
+            });
+            renderTable('requestsTable', headers, rows);
+        }
+
+        window.openForwardModal = function(id) {
+            if(!hasPermission('forward_request')) return toast('Permission Denied: Your account has been restricted from forwarding pipelines.', 'error');
+            document.getElementById('forwardForm').reset();
+            const req = getById('requests', id);
+            if(req) {
+                document.getElementById('editReason').value = req.reason;
+            }
+            document.getElementById('reqIdToForward').value = id;
+            openModal('forwardModal');
+        }
+
+        document.getElementById('forwardForm').onsubmit = function(e) {
+            e.preventDefault();
+            const id = document.getElementById('reqIdToForward').value;
+            const remarks = document.getElementById('staffRemarks').value;
+            const updatedReason = document.getElementById('editReason').value;
+            
+            update('requests', id, { status: 'forwarded', staffRemarks: remarks, reason: updatedReason });
+            toast("Request forwarded to Admin", "success");
+            closeModal('forwardModal');
+            loadData();
+        }
+    </script>
+</body>
+</html>

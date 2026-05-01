@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CertPro | Global Certification Network</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <style>
+        body {
+            background-color: var(--bg-tertiary);
+            background-image: linear-gradient(var(--border-color) 1px, transparent 1px),
+            linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+            background-size: 40px 40px; 
+        }
+
+        .landing-header {
+            background: var(--bg-primary);
+            border-bottom: 2px solid var(--text-primary);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .landing-logo {
+            font-family: var(--font-heading);
+            font-size: 1.8rem;
+            text-transform: uppercase;
+            font-weight: 900;
+            letter-spacing: -1px;
+        }
+
+        .landing-nav {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .landing-nav a {
+            font-family: var(--font-mono);
+            text-decoration: none;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .landing-nav .btn-login {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            padding: 8px 16px;
+            border: 1px solid var(--text-primary);
+        }
+
+        .landing-nav .btn-login:hover {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: var(--bg-primary);
+            border: 1px solid var(--text-primary);
+            box-shadow: 15px 15px 0px var(--border-color);
+            padding: 80px 60px;
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .hero h1 {
+            font-size: 4.5rem;
+            line-height: 1.1;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin: 0 auto 40px auto;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .hero-actions a {
+            padding: 15px 30px;
+            font-family: var(--font-body);
+            text-transform: uppercase;
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: 2px solid var(--text-primary);
+            transition: all 0.2s ease-in-out;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-dark {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+        }
+        .btn-dark:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        .btn-light {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .btn-light:hover {
+            background: var(--bg-secondary);
+        }
+
+        /* Features Section */
+        .section-title {
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-bottom: 80px;
+        }
+
+        .feature-box {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            padding: 40px;
+            transition: transform 0.2s;
+        }
+
+        .feature-box:hover {
+            border-color: var(--text-primary);
+            transform: translateY(-5px);
+            box-shadow: 8px 8px 0px var(--border-color);
+        }
+
+        .feature-box h3 {
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+
+        .feature-box p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* Role Matrix Section */
+        .role-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 80px;
+        }
+
+        .role-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--text-primary);
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .role-card h4 {
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--text-primary);
+            padding-bottom: 10px;
+        }
+
+        .role-card ul {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .role-card ul li {
+            margin-bottom: 10px;
+            position: relative;
+            padding-left: 15px;
+        }
+        .role-card ul li::before {
+            content: "›";
+            position: absolute;
+            left: 0;
+            top: -2px;
+            font-size: 1.2rem;
+            color: var(--accent);
+        }
+
+        /* Architecture Section */
+        .arch-banner {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            padding: 60px;
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .arch-banner h2 {
+            font-size: 3rem;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+
+        .arch-banner p {
+            color: #94a3b8;
+            max-width: 800px;
+            margin: 0 auto;
+            font-size: 1.1rem;
+        }
+
+        /* Footer */
+        .footer {
+            border-top: 2px solid var(--text-primary);
+            background: var(--bg-primary);
+            padding: 40px;
+            text-align: center;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        /* ── Mobile hamburger ── */
+        .landing-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            flex-direction: column;
+            gap: 5px;
+            padding: 8px;
+            color: var(--text-primary);
+        }
+        .landing-menu-toggle span {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background: currentColor;
+            transition: all 0.25s ease;
+        }
+        .landing-menu-toggle.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .landing-menu-toggle.open span:nth-child(2) { opacity: 0; }
+        .landing-menu-toggle.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+        .landing-nav-mobile {
+            display: none;
+            flex-direction: column;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-color);
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 99;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        }
+        .landing-nav-mobile.open { display: flex; }
+        .landing-nav-mobile a {
+            padding: 14px 24px;
+            border-bottom: 1px solid var(--border-color);
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+        .landing-nav-mobile .btn-login {
+            margin: 16px;
+            text-align: center;
+            border: 2px solid var(--text-primary);
+            background: var(--text-primary);
+            color: var(--bg-primary);
+        }
+
+        /* ── Responsive breakpoints ── */
+        .how-it-works-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 80px;
+            text-align: center;
+        }
+        .how-step {
+            padding: 30px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-primary);
+        }
+
+        @media (max-width: 1024px) {
+            .feature-grid { grid-template-columns: repeat(2, 1fr); }
+            .role-grid     { grid-template-columns: repeat(2, 1fr); }
+            .how-it-works-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .landing-header { padding: 0 20px; position: relative; }
+            .landing-nav { display: none; }
+            .landing-menu-toggle { display: flex; }
+            .container { padding: 40px 16px; }
+            .hero { padding: 40px 20px; margin-bottom: 48px; }
+            .hero h1 { font-size: 2.4rem; }
+            .hero p { font-size: 1rem; }
+            .hero-actions { flex-direction: column; gap: 12px; align-items: stretch; }
+            .hero-actions a { text-align: center; padding: 14px 20px; }
+            .feature-grid { grid-template-columns: 1fr; gap: 16px; margin-bottom: 48px; }
+            .feature-box { padding: 24px; }
+            .role-grid { grid-template-columns: 1fr; gap: 16px; margin-bottom: 48px; }
+            .how-it-works-grid { grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 48px; }
+            .arch-banner { padding: 40px 20px; margin-bottom: 48px; }
+            .arch-banner h2 { font-size: 2rem; }
+            .footer { padding: 24px 16px; }
+        }
+        @media (max-width: 480px) {
+            .hero h1 { font-size: 1.9rem; }
+            .how-it-works-grid { grid-template-columns: 1fr; }
+            .role-grid { grid-template-columns: 1fr; }
+            .landing-logo { font-size: 1.4rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="landing-header">
+        <div class="landing-logo">CertPro</div>
+        <nav class="landing-nav">
+            <a href="report-guidelines.html" style="color:var(--accent);">Report Guidelines</a>
+            <a href="portal.html?tab=verify">Verify Certificate</a>
+            <a href="portal.html?tab=track">Track Request</a>
+            <a href="portal.html?tab=login" class="btn-login">System Login</a>
+        </nav>
+        <!-- Mobile hamburger -->
+        <button class="landing-menu-toggle" id="landingMenuBtn" aria-label="Toggle menu">
+            <span></span><span></span><span></span>
+        </button>
+        <!-- Mobile nav dropdown -->
+        <div class="landing-nav-mobile" id="landingNavMobile">
+            <a href="report-guidelines.html" style="color:var(--accent);">Report Guidelines</a>
+            <a href="portal.html?tab=verify">Verify Certificate</a>
+            <a href="portal.html?tab=track">Track Request</a>
+            <a href="portal.html?tab=login" class="btn-login">System Login</a>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1>Global Digital Academic Credentials</h1>
+            <p>CertPro is a comprehensive platform designed to streamline how universities issue academic certificates, and how employers verify them instantaneously online.</p>
+            <div class="hero-actions">
+                <a href="portal.html?tab=signup" class="btn-dark">Student Sign Up</a>
+                <a href="portal.html?tab=verify" class="btn-light">Verify a Certificate</a>
+            </div>
+        </section>
+
+        <!-- New Section: How It Works -->
+        <h2 class="section-title">How It Works</h2>
+        <section class="how-it-works-grid">
+            <div class="how-step">
+                <div style="font-size: 2rem; margin-bottom: 15px;">1️⃣</div>
+                <h3 style="font-size:1.1rem; margin-bottom:10px;">Student Request</h3>
+                <p style="font-size:0.9rem; color:var(--text-secondary);">Students request their digital certificates from their respective university portals.</p>
+            </div>
+            <div class="how-step">
+                <div style="font-size: 2rem; margin-bottom: 15px;">2️⃣</div>
+                <h3 style="font-size:1.1rem; margin-bottom:10px;">Staff Review</h3>
+                <p style="font-size:0.9rem; color:var(--text-secondary);">University staff verify academic records and approve the request to the administrators.</p>
+            </div>
+            <div class="how-step">
+                <div style="font-size: 2rem; margin-bottom: 15px;">3️⃣</div>
+                <h3 style="font-size:1.1rem; margin-bottom:10px;">Admin Issuance</h3>
+                <p style="font-size:0.9rem; color:var(--text-secondary);">Administrators authorize and issue the final, completely tamper-proof digital document.</p>
+            </div>
+            <div class="how-step">
+                <div style="font-size: 2rem; margin-bottom: 15px;">4️⃣</div>
+                <h3 style="font-size:1.1rem; margin-bottom:10px;">Public Verification</h3>
+                <p style="font-size:0.9rem; color:var(--text-secondary);">Anyone can instantly verify the authenticity of the certificate using its unique ID.</p>
+            </div>
+        </section>
+
+        <!-- System Transparency Live Stats -->
+        <h2 class="section-title">Network Transparency (Live)</h2>
+        <section class="feature-grid" style="margin-bottom:60px;" id="transparency">
+            <div class="feature-box" style="text-align:center;">
+                <h3 style="color:var(--accent); font-size:2rem;" id="pub-certs">0</h3>
+                <p>Total Verified Certificates</p>
+            </div>
+            <div class="feature-box" style="text-align:center;">
+                <h3 style="color:var(--accent); font-size:2rem;" id="pub-unis">0</h3>
+                <p>Global Universities</p>
+            </div>
+            <div class="feature-box" style="text-align:center;">
+                <h3 style="color:var(--accent); font-size:2rem;" id="pub-students">0</h3>
+                <p>Connected Students</p>
+            </div>
+            <div class="feature-box" style="text-align:center;">
+                <h3 style="color:var(--badge-pending-color); font-size:2rem;" id="pub-reqs">0</h3>
+                <p>Pending Certificate Requests</p>
+            </div>
+            <div class="feature-box" style="text-align:center;">
+                <h3 style="color:var(--badge-issued-color); font-size:2rem;" id="pub-issued">0</h3>
+                <p>Recently Approved Requests</p>
+            </div>
+            <div class="feature-box" style="text-align:center;">
+                <h3 style="color:var(--badge-issued-color); font-size:1.5rem; margin-top:5px;">Operational</h3>
+                <p>Protocol System Status</p>
+            </div>
+        </section>
+
+        <!-- Functionalities Section -->
+        <h2 class="section-title">Core Features</h2>
+        <section class="feature-grid">
+            <div class="feature-box">
+                <h3 style="color:var(--accent);">Instant Verification</h3>
+                <p>A public portal allows any employer or organization to instantly verify a certificate to ensure it is valid and has not been forged.</p>
+            </div>
+            <div class="feature-box">
+                <h3>Automated Processing</h3>
+                <p>Easy to track digital system. Students submit requests, staff review them, and administrators approve them quickly all in one dashboard.</p>
+            </div>
+            <div class="feature-box">
+                <h3>Secure Storage</h3>
+                <p>All issued certificates are securely stored in the database. Every action, including approvals and tracking, is actively logged.</p>
+            </div>
+            <div class="feature-box">
+                <h3>Role Management</h3>
+                <p>Dashboards are visually separated. University Administrators only see their specific students, while Superadmins oversee the entire system.</p>
+            </div>
+            <div class="feature-box">
+                <h3>Automated Setup</h3>
+                <p>Instantly handles bulk university setups and student data imports out of the box, letting institutions get started immediately.</p>
+            </div>
+            <div class="feature-box">
+                <h3>Analytics Dashboard</h3>
+                <p>Real-time visual reports on every dashboard. Managers can easily track pending requests, student numbers, and certificate issuance stats.</p>
+            </div>
+        </section>
+
+        <!-- Role Matrix Section -->
+        <h2 class="section-title">User Roles</h2>
+        <section class="role-grid">
+            <div class="role-card">
+                <h4>Super Admin</h4>
+                <ul>
+                    <li>Oversees all system Universities</li>
+                    <li>Add, Edit, Block Universities</li>
+                    <li>Manage Courses & Certificate types</li>
+                    <li>View complete system activity</li>
+                </ul>
+            </div>
+            <div class="role-card">
+                <h4>University Admin</h4>
+                <ul>
+                    <li>Manages their own University</li>
+                    <li>Approves and issues certificates</li>
+                    <li>Views localized university data</li>
+                    <li>Manages their own staff members</li>
+                </ul>
+            </div>
+            <div class="role-card">
+                <h4>Office Staff</h4>
+                <ul>
+                    <li>Acts as the first review step</li>
+                    <li>Reviews incoming student requests</li>
+                    <li>Adds remarks or system notes</li>
+                    <li>Forwards valid requests to Admins</li>
+                </ul>
+            </div>
+            <div class="role-card">
+                <h4>Enrolled Student</h4>
+                <ul>
+                    <li>Manages their personal profile</li>
+                    <li>Requests new academic certificates</li>
+                    <li>Gets shareable Verification Links</li>
+                    <li>Tracks their request progress</li>
+                </ul>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Arch Banner -->
+    <section class="arch-banner">
+        <h2>Fast and Reliable</h2>
+        <p>Built completely without heavy frameworks or complicated backends. This system operates natively on your browser using fast, structured data storage to guarantee instantaneous load speeds.</p>
+    </section>
+
+    <footer class="footer">
+        &copy; 2026 CertPro Global Certificate Network
+    </footer>
+
+    <script>
+        // Landing page hamburger toggle
+        const landingBtn = document.getElementById('landingMenuBtn');
+        const landingNav = document.getElementById('landingNavMobile');
+        if (landingBtn && landingNav) {
+            landingBtn.addEventListener('click', () => {
+                const open = landingNav.classList.toggle('open');
+                landingBtn.classList.toggle('open', open);
+            });
+            landingNav.querySelectorAll('a').forEach(a => {
+                a.addEventListener('click', () => {
+                    landingNav.classList.remove('open');
+                    landingBtn.classList.remove('open');
+                });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const certs = JSON.parse(localStorage.getItem('certificates')) || [];
+            const unis = JSON.parse(localStorage.getItem('universities')) || [];
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const reqs = JSON.parse(localStorage.getItem('requests')) || [];
+
+            document.getElementById('pub-certs').innerText = certs.filter(c => c.status === 'issued').length;
+            document.getElementById('pub-unis').innerText = unis.filter(u => u.status === 'active').length;
+            document.getElementById('pub-students').innerText = users.filter(u => u.role === 'student').length;
+            document.getElementById('pub-reqs').innerText = reqs.filter(r => r.status === 'pending').length;
+            document.getElementById('pub-issued').innerText = reqs.filter(r => r.status === 'approved').length;
+        });
+    </script>
+</body>
+</html>

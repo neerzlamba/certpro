@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Support | CertPro.io</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <style>
+        .page-header { padding: 80px 60px; border-bottom: 1px solid var(--border); background: #080c14; text-align: center; }
+        .page-content { max-width: 600px; margin: 80px auto; padding: 0 40px; }
+        .nav-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 60px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: rgba(3, 7, 18, 0.8); backdrop-filter: blur(10px); z-index: 1000; }
+        .nav-links { display: flex; gap: 30px; align-items: center; }
+        .nav-links a { text-decoration: none; color: var(--text-muted); font-size: 14px; font-weight: 500; transition: var(--transition); }
+        .nav-links a:hover { color: var(--accent-gold); }
+    </style>
+</head>
+<body>
+
+    <header class="nav-header">
+        <a href="landing.html" style="text-decoration:none;"><h3 style="font-size: 24px; color: #fff; letter-spacing: -1px; margin:0;">CERTPRO.IO</h3></a>
+        <nav class="nav-links">
+            <a href="about.html">About Us</a>
+            <a href="help.html">Help Center</a>
+            <a href="report.html">Transparency</a>
+            <a href="contact.html" style="color: var(--accent-gold);">Contact</a>
+            <a href="index.html" class="btn btn-primary" style="padding: 10px 20px;">Launch Portal</a>
+        </nav>
+    </header>
+
+    <header class="page-header">
+        <p class="label">GET_IN_TOUCH</p>
+        <h1 style="font-size: 3.5rem;">Contact Support</h1>
+        <p style="color: var(--text-muted); max-width: 600px; margin: 20px auto 0;">Have a question or need technical assistance? Fill the form below or email us directly.</p>
+    </header>
+
+    <main class="page-content">
+        <div class="card">
+            <form id="contactForm">
+                <div class="form-group">
+                    <label class="label">YOUR NAME</label>
+                    <input type="text" id="name" placeholder="Rajesh Kumar" required>
+                </div>
+                <div class="form-group">
+                    <label class="label">YOUR EMAIL</label>
+                    <input type="email" id="email" placeholder="rajesh@college.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="label">MESSAGE</label>
+                    <textarea id="message" rows="5" placeholder="Support query goes here..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">SEND_MESSAGE</button>
+            </form>
+        </div>
+
+        <div style="margin-top: 60px; text-align: center; color: var(--text-muted);">
+            <p style="font-size: 14px;">Direct Email: support@certpro.io</p>
+            <p style="font-size: 14px;">Hours: Mon-Fri, 9AM to 6PM (IST)</p>
+        </div>
+    </main>
+
+    <footer style="padding: 80px 60px; border-top: 1px solid var(--border); text-align: center; color: var(--text-muted); font-size: 14px;">
+        <p>&copy; 2026 CertPro.io - Global Verification Standards</p>
+    </footer>
+
+    <div id="toastContainer" class="toast-container"></div>
+    <script src="assets/utils.js"></script>
+    <script>
+        document.getElementById('contactForm').onsubmit = (e) => {
+            e.preventDefault();
+            Utils.toast("Email Sent! We will get back to you soon.", "success");
+            document.getElementById('contactForm').reset();
+        };
+    </script>
+
+</body>
+</html>

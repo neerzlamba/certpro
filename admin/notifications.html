@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Send Notifications</h1>
+                <button class="btn btn-primary" id="btnCompose" onclick="openComposeModal()" style="display:none;align-items:center;gap:6px;">
+                    <i data-lucide="send" style="width:16px;height:16px;"></i> Compose
+                </button>
+            </div>
+
+            <!-- Stats row -->
+            <div class="stat-grid" style="margin-bottom:24px;">
+                <div class="stat-card">
+                    <h3>Total Sent</h3>
+                    <div class="value" id="countTotal">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Broadcasts</h3>
+                    <div class="value" id="countBroadcast">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Direct Messages</h3>
+                    <div class="value" id="countDirect">0</div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom:16px;">
+                <input type="text" id="searchInput" placeholder="Search by subject or recipient..." style="max-width:320px;" oninput="loadNotifs()">
+            </div>
+
+            <div class="card">
+                <div id="notifTable"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Compose Modal -->
+    <div id="composeModal" class="modal-overlay">
+        <div class="modal-content" style="max-width:560px;">
+            <div class="modal-header">
+                <h2><i data-lucide="send" style="width:18px;height:18px;margin-right:8px;vertical-align:middle;"></i> Compose Notification</h2>
+                <button class="modal-close" onclick="closeModal('composeModal')">✕</button>
+            </div>
+            <form id="composeForm">
+                <div class="form-group">
+                    <label>Send To</label>
+                    <select id="notifRecipient" required>
+                        <option value="all">📢 Broadcast — All Students in University</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Subject</label>
+                    <input type="text" id="notifSubject" required placeholder="e.g. Certificate Ready for Collection">
+                </div>
+                <div class="form-group">
+                    <label>Message Body</label>
+                    <textarea id="notifMessage" required placeholder="Write your message here..." rows="5"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Priority Level</label>
+                    <select id="notifPriority">
+                        <option value="normal">Normal</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" style="border:1px solid var(--border-color);" onclick="closeModal('composeModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i data-lucide="send" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;"></i> Send Notification</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Modal -->
+    <div id="viewModal" class="modal-overlay">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <h2>Notification Details</h2>
+                <button class="modal-close" onclick="closeModal('viewModal')">✕</button>
+            </div>
+            <div id="viewModalBody" style="padding:0 4px 8px;">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeModal('viewModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRoles(['admin', 'staff', 'superadmin', 'student']);
+        let allNotifs = [];
+
+        if (session) {
+            renderNav(session.role);
+            if (hasPermission('send_notify')) {
+                document.getElementById('btnCompose').style.display = 'flex';
+            }
+            if (session.role !== 'student') {
+                loadRecipients();
+            }
+            loadNotifs();
+            logAction('VIEW_NOTIFICATIONS', 'SYSTEM', 'User opened the Notifications center.');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function loadRecipients() {
+            const myStudents = getAll('students').filter(s => s.universityId === session.universityId || session.role === 'superadmin');
+            const users = getAll('users');
+            let opts = '<option value="all">📢 Broadcast — All Students in University</option>';
+            myStudents.forEach(stu => {
+                const u = users.find(x => x.id === stu.userId);
+                if (u) opts += `<option value="${stu.id}">${u.name} — ${u.email}</option>`;
+            });
+            document.getElementById('notifRecipient').innerHTML = opts;
+        }
+
+        function loadNotifs() {
+            const isSA = session.role === 'superadmin';
+            if (session.role === 'student') {
+                const myStu = getAll('students').find(s => s.userId === session.userId);
+                const sId = myStu ? myStu.id : '-';
+                const myUniId = myStu ? myStu.universityId : '-';
+                // Show broadcasts from their own university OR global ones from superadmin
+                myNotifs = allNotifs.filter(n => 
+                    (n.recipientId === sId) || 
+                    (n.recipientId === 'all' && (n.universityId === myUniId || n.universityId === 'GLOBAL'))
+                );
+            } else if (isSA) {
+                myNotifs = allNotifs;
+            } else {
+                myNotifs = allNotifs.filter(n => n.universityId === session.universityId);
+            }
+
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            if (search) {
+                myNotifs = myNotifs.filter(n =>
+                    (n.subject || '').toLowerCase().includes(search) ||
+                    (n.message || '').toLowerCase().includes(search)
+                );
+            }
+
+            myNotifs.sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt));
+
+            // Update stats
+            document.getElementById('countTotal').innerText = myNotifs.length;
+            document.getElementById('countBroadcast').innerText = myNotifs.filter(n => n.recipientId === 'all').length;
+            document.getElementById('countDirect').innerText = myNotifs.filter(n => n.recipientId !== 'all').length;
+
+            const headers = ['Sent At', 'To', 'Subject', 'Priority', 'Sent By', 'Actions'];
+            const rows = myNotifs.map(n => {
+                const recipLabel = n.recipientId === 'all'
+                    ? '<span class="badge" style="background:#1565c0;color:#fff;">Broadcast</span>'
+                    : `<span>${getUserName(getById('students', n.recipientId)?.userId || '')}</span>`;
+                const priorityColor = n.priority === 'urgent' ? '#c62828' : n.priority === 'high' ? '#e65100' : '#2e7d32';
+                return [
+                    formatDate(n.sentAt),
+                    recipLabel,
+                    `<strong>${n.subject || '-'}</strong>`,
+                    `<span class="badge" style="background:${priorityColor};color:#fff;">${n.priority || 'normal'}</span>`,
+                    getUserName(n.sentBy),
+                    `<button class="btn" style="padding:4px 8px;font-size:0.75rem;background:var(--bg-tertiary);border:1px solid var(--border-color);" onclick="viewNotif('${n.id}')"><i data-lucide="eye" style="width:12px;height:12px;"></i></button>`
+                ];
+            });
+
+            renderTable('notifTable', headers, rows);
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        window.viewNotif = function(id) {
+            const n = getAll('notifications').find(x => x.id === id);
+            if (!n) return;
+            const priorityColor = n.priority === 'urgent' ? '#c62828' : n.priority === 'high' ? '#e65100' : '#2e7d32';
+            const recipLabel = n.recipientId === 'all' ? 'All Students (Broadcast)' : getUserName(getById('students', n.recipientId)?.userId || '');
+            document.getElementById('viewModalBody').innerHTML = `
+                <div class="form-group">
+                    <label style="font-size:0.8rem;color:var(--text-light);">SENT TO</label>
+                    <p style="font-weight:600;">${recipLabel}</p>
+                </div>
+                <div class="form-group">
+                    <label style="font-size:0.8rem;color:var(--text-light);">SUBJECT</label>
+                    <p style="font-weight:600;">${n.subject}</p>
+                </div>
+                <div class="form-group">
+                    <label style="font-size:0.8rem;color:var(--text-light);">MESSAGE</label>
+                    <p style="white-space:pre-line;background:var(--bg-secondary);padding:12px;border-radius:6px;">${n.message}</p>
+                </div>
+                <div style="display:flex;gap:16px;">
+                    <div class="form-group" style="flex:1;">
+                        <label style="font-size:0.8rem;color:var(--text-light);">PRIORITY</label>
+                        <p><span class="badge" style="background:${priorityColor};color:#fff;">${n.priority}</span></p>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label style="font-size:0.8rem;color:var(--text-light);">SENT AT</label>
+                        <p>${formatDate(n.sentAt)}</p>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label style="font-size:0.8rem;color:var(--text-light);">SENT BY</label>
+                        <p>${getUserName(n.sentBy)}</p>
+                    </div>
+                </div>
+            `;
+            openModal('viewModal');
+        }
+
+        window.openComposeModal = function() {
+            if (!hasPermission('send_notify')) return toast('Permission Denied: You cannot send notifications', 'error');
+            document.getElementById('composeForm').reset();
+            loadRecipients();
+            openModal('composeModal');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        document.getElementById('composeForm').onsubmit = function(e) {
+            e.preventDefault();
+            if (!hasPermission('send_notify')) return toast('Permission Denied', 'error');
+
+            const recipId = document.getElementById('notifRecipient').value;
+            const subject = document.getElementById('notifSubject').value;
+            const message = document.getElementById('notifMessage').value;
+            const priority = document.getElementById('notifPriority').value;
+
+            const notif = {
+                id: 'NOTIF-' + Date.now(),
+                universityId: session.universityId || 'GLOBAL',
+                sentBy: session.userId,
+                recipientId: recipId,
+                subject: subject,
+                message: message,
+                priority: priority,
+                sentAt: new Date().toISOString(),
+                status: 'sent'
+            };
+            create('notifications', notif);
+            logAction('SEND_NOTIFICATION', recipId === 'all' ? 'ALL_STUDENTS' : recipId, `Subject: ${subject} | Priority: ${priority} | Uni: ${notif.universityId}`);
+
+            toast(`Notification sent successfully!`, 'success');
+            closeModal('composeModal');
+            loadNotifs();
+        }
+    </script>
+</body>
+</html>

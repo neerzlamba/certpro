@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students | Staff | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">University Students</h1>
+            </div>
+
+            <div class="card" style="margin-bottom: 20px;">
+                <input type="text" id="searchInput" placeholder="Search by name or email..." style="max-width:300px;" oninput="applyFilters()">
+            </div>
+
+            <div class="card">
+                <div id="studentTable"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit Contact Modal -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Update Student Details</h2>
+                <button class="modal-close" onclick="closeModal('editModal')">✕</button>
+            </div>
+            <form id="editForm">
+                <input type="hidden" id="studentId">
+                <div class="form-group">
+                    <label>Phone Contact</label>
+                    <input type="text" id="stuPhone" required>
+                </div>
+                <div class="form-group">
+                    <label>Profile Bio</label>
+                    <textarea id="stuBio"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" style="color:var(--text-main); border:1px solid #ccc; background:#fff" onclick="closeModal('editModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRoles(['staff']);
+        let myStudents = [];
+
+        if (session) {
+            renderNav('staff');
+            loadData();
+        }
+
+        function loadData() {
+            myStudents = getAll('students').filter(s => s.universityId === session.universityId);
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const users = getAll('users');
+            
+            let filtered = [];
+            myStudents.forEach(stu => {
+                const u = users.find(x => x.id === stu.userId);
+                if (!u) return;
+                
+                if (u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search)) {
+                    filtered.push({ stu, user: u });
+                }
+            });
+            
+            const headers = ['Name', 'Email', 'Phone', 'Status', 'Actions'];
+            const rows = filtered.map(data => {
+                let actionHtml = '';
+                if(hasPermission('manage_students')) {
+                    actionHtml = `<button class="btn btn-primary" style="padding:4px 8px;font-size:0.8rem;" onclick="openEditModal('${data.stu.id}')">Edit Phone/Bio</button>`;
+                }
+                return [
+                    data.user.name,
+                    data.user.email,
+                    data.stu.phone,
+                    getStatusBadge(data.user.status),
+                    actionHtml
+                ];
+            });
+            renderTable('studentTable', headers, rows);
+        }
+
+        window.openEditModal = function(id) {
+            if(!hasPermission('manage_students')) return toast('Permission Denied', 'error');
+            document.getElementById('editForm').reset();
+            const stu = getById('students', id);
+            if (stu) {
+                document.getElementById('studentId').value = stu.id;
+                document.getElementById('stuPhone').value = stu.phone;
+                document.getElementById('stuBio').value = stu.bio || '';
+                openModal('editModal');
+            }
+        }
+
+        document.getElementById('editForm').onsubmit = function(e) {
+            e.preventDefault();
+            const id = document.getElementById('studentId').value;
+            const changes = {
+                phone: document.getElementById('stuPhone').value,
+                bio: document.getElementById('stuBio').value
+            };
+            update('students', id, changes);
+            toast("Student details updated", "success");
+            closeModal('editModal');
+            loadData();
+        }
+    </script>
+</body>
+</html>

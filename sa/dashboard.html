@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Admin Dashboard | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Main Admin Dashboard</h1>
+            </div>
+
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <h3>Total Universities</h3>
+                    <div class="value" id="count-uni">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Users</h3>
+                    <div class="value" id="count-users">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Students</h3>
+                    <div class="value" id="count-students">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Staff</h3>
+                    <div class="value" id="count-staff">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Certificates</h3>
+                    <div class="value" id="count-certs">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3 style="color:var(--badge-pending-color);">Pending Approvals</h3>
+                    <div class="value" id="count-pending">0</div>
+                </div>
+            </div>
+
+            <div class="dash-grid-main">
+                <div class="card" style="margin-bottom:0;">
+                    <h2 style="font-size:1.1rem; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                        Certificate Overview
+                        <span style="font-size:0.75rem; color:var(--text-tertiary); font-family:var(--font-mono); font-weight:normal;">LIVE DATA</span>
+                    </h2>
+                    <div class="dash-flex-stats">
+                        <div>Valid Certs: <strong id="progress-val-valid" style="color:var(--badge-issued-color);">0%</strong></div>
+                        <div>Revoked: <strong id="progress-val-rev" style="color:var(--btn-danger);">0%</strong></div>
+                    </div>
+                    <div style="width:100%; height:12px; background:var(--bg-secondary); border:1px solid var(--border-color); display:flex;">
+                        <div id="bar-issued" style="height:100%; background:var(--badge-issued-color); width:0%;"></div>
+                        <div id="bar-revoked" style="height:100%; background:var(--btn-danger); width:0%;"></div>
+                    </div>
+
+                    <div class="dash-inner-2col" style="margin-top:25px;">
+                        <div style="padding:15px; background:var(--bg-secondary); border:1px solid var(--border-color);">
+                            <div style="font-size:0.8rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:5px;">Login Warnings</div>
+                            <div style="font-family:var(--font-mono); font-size:1.5rem; color:var(--btn-danger);">0 (0.00%)</div>
+                        </div>
+                        <div style="padding:15px; background:var(--bg-secondary); border:1px solid var(--border-color);">
+                            <div style="font-size:0.8rem; text-transform:uppercase; color:var(--text-secondary); margin-bottom:5px;">System Health</div>
+                            <div style="font-family:var(--font-mono); font-size:1.5rem; color:var(--badge-issued-color);">Good</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom:0;">
+                    <h2 style="font-size:1.1rem; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">Quick Actions</h2>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <button class="btn btn-primary" style="width:100%; text-align:left; justify-content:flex-start;" onclick="window.location.href='users.html'">👥 Manage Users</button>
+                        <button class="btn" style="width:100%; text-align:left; justify-content:flex-start; background:var(--bg-secondary); border:1px solid var(--border-color); color:var(--text-primary);" onclick="window.location.href='certificates.html'">📝 Issue Certificate</button>
+                        <button class="btn" style="width:100%; text-align:left; justify-content:flex-start; background:var(--bg-secondary); border:1px solid var(--border-color); color:var(--text-primary);" onclick="window.location.href='requests.html'">🔍 View Requests</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dash-grid-2col">
+                <div class="card" style="margin-bottom:0;">
+                    <h2 style="font-size:1.1rem; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">Recent Activity</h2>
+                    <ul style="list-style:none; padding:0; margin:0; font-family:var(--font-mono); font-size:0.8rem; color:var(--text-secondary);">
+                        <li style="padding:10px 0; border-bottom:1px dashed var(--border-color);">[UPDATE] Admin logged in.</li>
+                        <li style="padding:10px 0; border-bottom:1px dashed var(--border-color);">[UPDATE] Records loaded online.</li>
+                        <li style="padding:10px 0; border-bottom:1px dashed var(--border-color);">[UPDATE] Quick view interface initialized.</li>
+                        <li style="padding:10px 0;">[UPDATE] System health checks passed.</li>
+                    </ul>
+                </div>
+                <div class="card" style="margin-bottom:0;">
+                    <h2 style="font-size:1.1rem; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">System Configuration</h2>
+                    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                        <button class="btn btn-primary" onclick="window.location.href='universities.html'">Manage Universities</button>
+                        <button class="btn" style="background:var(--bg-secondary); border:1px solid var(--border-color); color:var(--text-primary);" onclick="window.location.href='courses.html'">Course Setup</button>
+                        <button class="btn" style="background:var(--bg-secondary); border:1px solid var(--border-color); color:var(--text-primary);" onclick="window.location.href='cert-types.html'">Certificate Templates</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dash-grid-2col">
+                <div class="card" style="margin-bottom:0;">
+                    <h2 style="font-size:1.1rem; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">Recent Certificates</h2>
+                    <div id="table-recent" style="overflow-x:auto;"></div>
+                </div>
+
+                <div class="card" style="margin-bottom:0;">
+                    <h2 style="font-size:1.1rem; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">Role Distribution</h2>
+                    <div id="role-distribution-ui"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRole('superadmin');
+        if (session) {
+            renderNav('superadmin');
+            loadDashboard();
+        }
+
+        function loadDashboard() {
+            const unis = getAll('universities');
+            const users = getAll('users');
+            const students = getAll('students');
+            const staff = getAll('staff');
+            const certificates = getAll('certificates');
+            const requests = getAll('requests');
+
+            document.getElementById('count-uni').innerText = unis.length;
+            document.getElementById('count-users').innerText = users.length;
+            document.getElementById('count-students').innerText = students.length;
+            document.getElementById('count-staff').innerText = staff.length;
+            document.getElementById('count-certs').innerText = certificates.length;
+
+            const pendingCerts = certificates.filter(c => c.status === 'pending').length;
+            const pendingReqs = requests.filter(r => r.status === 'pending' || r.status === 'forwarded').length;
+            document.getElementById('count-pending').innerText = pendingCerts + pendingReqs;
+
+            // Render 5 recent certs
+            const recent = certificates
+                .sort((a,b) => new Date(b.issuedAt) - new Date(a.issuedAt))
+                .slice(0, 5);
+
+            // Compute role distribution
+            const rolesCount = {
+                student: users.filter(u => u.role === 'student').length,
+                staff: users.filter(u => u.role === 'staff').length,
+                admin: users.filter(u => u.role === 'admin').length,
+                superadmin: users.filter(u => u.role === 'superadmin').length
+            };
+            const totalSys = users.length || 1; // avoid /0
+            
+            let distHtml = '';
+            for(let key in rolesCount) {
+                let pct = Math.round((rolesCount[key]/totalSys)*100);
+                distHtml += `
+                    <div style="margin-bottom:12px;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px; text-transform:uppercase; font-family:var(--font-mono);">
+                            <span>${key}</span>
+                            <span>${rolesCount[key]} (${pct}%)</span>
+                        </div>
+                        <div style="width:100%; height:8px; background:var(--bg-secondary); border:1px solid var(--border-color);">
+                            <div style="height:100%; background:var(--text-primary); width:${pct}%;"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            document.getElementById('role-distribution-ui').innerHTML = distHtml;
+
+            const headers = ['Cert ID', 'Student', 'University', 'Date', 'Status'];
+            const rows = recent.map(c => {
+                const s = getById('students', c.studentId);
+                const sName = s ? getUserName(s.userId) : 'Unknown';
+                return [
+                    c.id,
+                    sName,
+                    getUniversityName(c.universityId),
+                    formatDate(c.issuedAt),
+                    getStatusBadge(c.status)
+                ];
+            });
+
+            // Chart Stats
+            const totalCerts = certificates.length || 1;
+            const validCount = certificates.filter(c => c.status === 'issued').length;
+            const revokedCount = certificates.filter(c => c.status === 'revoked').length;
+            
+            const validPct = Math.round((validCount / totalCerts) * 100);
+            const revPct = Math.round((revokedCount / totalCerts) * 100);
+
+            document.getElementById('progress-val-valid').innerText = `${validPct}%`;
+            document.getElementById('progress-val-rev').innerText = `${revPct}%`;
+            document.getElementById('bar-issued').style.width = `${validPct}%`;
+            document.getElementById('bar-revoked').style.width = `${revPct}%`;
+
+            renderTable('table-recent', headers, rows);
+        }
+    </script>
+</body>
+</html>

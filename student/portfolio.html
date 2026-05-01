@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Portfolio | Student | CertPro.io</title>
+    <link rel="stylesheet" href="../assets/style.css">
+    <style>
+        .portfolio-header { text-align:center; padding:60px 20px; border-bottom:1px solid var(--border); }
+        .cert-card { border:1px solid var(--border); padding:30px; background:var(--surface); transition:var(--transition); }
+        .cert-card:hover { border-color:var(--accent-gold); transform:translateY(-3px); }
+        .cert-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; }
+        .share-link { background:var(--layout-bg); border:1px solid var(--border); padding:14px 20px; font-family:monospace; font-size:12px; word-break:break-all; }
+    </style>
+</head>
+<body class="layout">
+    <div id="sidebarContainer"></div>
+    <div id="toastContainer" class="toast-container"></div>
+    <main class="main-content">
+        <header style="margin-bottom:60px;display:flex;justify-content:space-between;align-items:flex-end;">
+            <div>
+                <p class="label">Public Showcase</p>
+                <h1>My Portfolio</h1>
+                <p style="color:var(--text-muted);">Your certificates visible to the world. Share this link with employers.</p>
+            </div>
+            <button class="btn btn-primary" onclick="copyLink()">Copy Portfolio Link</button>
+        </header>
+
+        <!-- Public share link -->
+        <div class="card" style="margin-bottom:40px;padding:30px;">
+            <p class="label" style="margin-bottom:12px;">YOUR PUBLIC PORTFOLIO LINK</p>
+            <div class="share-link" id="shareLink"></div>
+        </div>
+
+        <!-- Visibility toggle -->
+        <div style="margin-bottom:40px;display:flex;gap:20px;align-items:center;">
+            <p class="label">SHOWING:</p>
+            <select id="visFilter" onchange="renderCerts()" style="max-width:200px;">
+                <option value="all">All My Certificates</option>
+                <option value="public">Public Only</option>
+                <option value="private">Private Only</option>
+            </select>
+        </div>
+
+        <div class="cert-grid" id="certGrid"></div>
+    </main>
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/utils.js"></script>
+    <script src="../assets/seed.js"></script>
+    <script>
+        const session = Auth.guardPage('student');
+        if (session) { Utils.renderSidebar('student','portfolio'); renderCerts(); loadShareLink(); }
+
+        function loadShareLink() {
+            const link = `${window.location.origin}/verify.html?student=${session.userId}`;
+            document.getElementById('shareLink').textContent = link;
+        }
+
+        function copyLink() {
+            const link = `${window.location.origin}/verify.html?student=${session.userId}`;
+            navigator.clipboard.writeText(link).then(() => Utils.toast('Portfolio link copied!', 'success'));
+        }
+
+        function renderCerts() {
+            const vis = document.getElementById('visFilter').value;
+            const all = DB.getAll('certificates').filter(c => c.studentId === session.userId);
+            const filtered = vis === 'all' ? all : all.filter(c => c.visibility === vis);
+            const grid = document.getElementById('certGrid');
+
+            grid.innerHTML = filtered.map(c => `
+                <div class="cert-card">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
+                        <span class="badge ${c.status==='issued'?'badge-success':'badge-danger'}">${c.status.toUpperCase()}</span>
+                        <span class="badge ${c.visibility==='public'?'badge-pending':'badge-danger'}" style="font-size:9px;">${c.visibility.toUpperCase()}</span>
+                    </div>
+                    <p style="font-weight:800;font-size:16px;margin-bottom:8px;">${c.title}</p>
+                    <p style="font-size:12px;opacity:0.5;margin-bottom:20px;">${Utils.formatDate(c.issuedAt)}</p>
+                    <div style="display:flex;gap:10px;">
+                        <a href="../verify.html?id=${c.id}" target="_blank" class="btn btn-outline" style="padding:8px 16px;font-size:10px;">VIEW</a>
+                        <button onclick="toggleVisibility('${c.id}','${c.visibility}')" class="btn btn-outline" style="padding:8px 16px;font-size:10px;">
+                            ${c.visibility==='public'?'MAKE PRIVATE':'MAKE PUBLIC'}
+                        </button>
+                    </div>
+                </div>
+            `).join('') || '<p style="opacity:0.3;font-size:14px;padding:60px 0;">No certificates in portfolio yet.</p>';
+        }
+
+        function toggleVisibility(id, current) {
+            const next = current === 'public' ? 'private' : 'public';
+            DB.update('certificates', id, { visibility: next });
+            Utils.toast(`Certificate is now ${next}.`, 'success');
+            renderCerts();
+        }
+    </script>
+</body>
+</html>

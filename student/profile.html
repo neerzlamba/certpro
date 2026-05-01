@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile | Student | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">My Profile Settings</h1>
+            </div>
+
+            <div class="card" style="max-width: 600px;">
+                <form id="profileForm">
+                    <p style="margin-bottom: 20px; font-size: 0.9rem; color: var(--text-light);">
+                        University: <strong id="lblUni">...</strong><br>
+                        Email: <strong id="lblEmail">...</strong>
+                    </p>
+                    <div class="form-group">
+                        <label>Full Legal Name</label>
+                        <input type="text" id="profName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Contact</label>
+                        <input type="text" id="profPhone" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Profile Bio</label>
+                        <textarea id="profBio"></textarea>
+                    </div>
+                    <div style="margin-top: 24px;">
+                        <button type="submit" class="btn btn-primary" style="width:100%;">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+            
+        </main>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRoles(['student']);
+        let studentRecord = null;
+        let userRecord = null;
+
+        if (session) {
+            renderNav('student');
+            loadData();
+        }
+
+        function loadData() {
+            userRecord = getById('users', session.userId);
+            studentRecord = getAll('students').find(s => s.userId === session.userId);
+
+            if (userRecord && studentRecord) {
+                document.getElementById('lblUni').innerText = getUniversityName(studentRecord.universityId);
+                document.getElementById('lblEmail').innerText = userRecord.email;
+                
+                document.getElementById('profName').value = userRecord.name;
+                document.getElementById('profPhone').value = studentRecord.phone;
+                document.getElementById('profBio').value = studentRecord.bio || '';
+            }
+        }
+
+        document.getElementById('profileForm').onsubmit = function(e) {
+            e.preventDefault();
+            if (!userRecord || !studentRecord) return;
+
+            // Update user table
+            update('users', userRecord.id, {
+                name: document.getElementById('profName').value
+            });
+
+            // Update student table
+            update('students', studentRecord.id, {
+                phone: document.getElementById('profPhone').value,
+                bio: document.getElementById('profBio').value
+            });
+
+            toast("Profile updated successfully", "success");
+            loadData(); // Reload UI
+        }
+    </script>
+</body>
+</html>

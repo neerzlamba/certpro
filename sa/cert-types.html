@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Types | Superadmin | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+    <style>
+        .color-bubble {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1px solid #ccc;
+            vertical-align: middle;
+        }
+        .cert-preview {
+            width: 100%;
+            height: 120px;
+            background: #fff;
+            border: 8px solid #000;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ccc;
+            font-size: 0.9rem;
+            font-family: serif;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Certificate Types</h1>
+                <button class="btn btn-primary" onclick="openCertTypeModal()">Create Certificate Type</button>
+            </div>
+
+            <div class="card" style="margin-bottom: 20px;">
+                <input type="text" id="searchInput" placeholder="Search by name..." style="max-width:300px;" oninput="loadData()">
+            </div>
+
+            <div class="card">
+                <div id="certTypeTable"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div id="certTypeModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Create Certificate Type</h2>
+                <button class="modal-close" onclick="closeModal('certTypeModal')">✕</button>
+            </div>
+            <form id="certTypeForm">
+                <input type="hidden" id="certTypeId">
+                <div class="form-group">
+                    <label>Certificate Name</label>
+                    <input type="text" id="certTypeName" required placeholder="e.g. Degree Certificate">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="certTypeDesc" required placeholder="Context about this certificate..."></textarea>
+                </div>
+                <div class="form-group" style="display:flex; gap:15px;">
+                    <div style="flex:1">
+                        <label>Border Hex Color</label>
+                        <input type="color" id="certTypeColor" value="#1a3c6e" style="height:45px; padding:2px;" oninput="updatePreview()">
+                    </div>
+                    <div style="flex:1">
+                        <label>Status</label>
+                        <select id="certTypeStatus" required>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Design Preview</label>
+                    <div class="cert-preview" id="certPreviewBox" style="border-color: #1a3c6e;">
+                        Certificate Document
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" style="color:var(--text-main); border:1px solid #ccc; background:#fff" onclick="closeModal('certTypeModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Certificate Type</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRoles(['superadmin', 'admin']);
+        let allCertTypes = [];
+
+        if (session) {
+            renderNav(session.role);
+            if(!hasPermission('manage_cert_types') && session.role !== 'superadmin') {
+                window.location.href = '../portal.html?tab=login';
+            }
+            loadData();
+        }
+
+        function loadData() {
+            allCertTypes = getAll('certTypes');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            
+            let filtered = allCertTypes.filter(c => c.name.toLowerCase().includes(search));
+            
+            const headers = ['ID', 'Border', 'Name', 'Description', 'Status', 'Actions'];
+            const rows = filtered.map(c => {
+                return [
+                    `<span style="font-family:monospace;font-size:0.8rem">${c.id}</span>`,
+                    `<div class="color-bubble" style="background-color:${c.borderColor};" title="${c.borderColor}"></div>`,
+                    c.name,
+                    c.description,
+                    getStatusBadge(c.status),
+                    `<button class="btn btn-primary" style="padding:4px 8px;font-size:0.8rem;margin-right:5px;" onclick="openCertTypeModal('${c.id}')"><i data-lucide="edit-3" style="width:14px;height:14px;"></i></button>` +
+                    `<button class="btn btn-danger" style="padding:4px 8px;font-size:0.8rem;" onclick="deleteCertType('${c.id}')"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>`
+                ];
+            });
+            renderTable('certTypeTable', headers, rows);
+            if(window.lucide) window.lucide.createIcons();
+        }
+
+        function updatePreview() {
+            const color = document.getElementById('certTypeColor').value;
+            document.getElementById('certPreviewBox').style.borderColor = color;
+        }
+
+        window.deleteCertType = function(id) {
+            confirmDelete("Delete this certificate type? Existing certificates using this type will lose reference name capability.", () => {
+                remove('certTypes', id);
+                toast("Certificate Type deleted", "success");
+                loadData();
+            });
+        }
+
+        window.openCertTypeModal = function(id = null) {
+            document.getElementById('certTypeForm').reset();
+            document.getElementById('certTypeId').value = '';
+            document.getElementById('modalTitle').innerText = 'Create Certificate Type';
+            document.getElementById('certTypeColor').value = '#1a3c6e';
+            updatePreview();
+            
+            if (id) {
+                document.getElementById('modalTitle').innerText = 'Edit Certificate Type';
+                const c = getById('certTypes', id);
+                if (c) {
+                    document.getElementById('certTypeId').value = c.id;
+                    document.getElementById('certTypeName').value = c.name;
+                    document.getElementById('certTypeDesc').value = c.description;
+                    document.getElementById('certTypeColor').value = c.borderColor;
+                    document.getElementById('certTypeStatus').value = c.status;
+                    updatePreview();
+                }
+            }
+            openModal('certTypeModal');
+        }
+
+        document.getElementById('certTypeForm').onsubmit = function(e) {
+            e.preventDefault();
+            const id = document.getElementById('certTypeId').value;
+            const data = {
+                name: document.getElementById('certTypeName').value,
+                description: document.getElementById('certTypeDesc').value,
+                borderColor: document.getElementById('certTypeColor').value,
+                status: document.getElementById('certTypeStatus').value
+            };
+
+            if (id) {
+                update('certTypes', id, data);
+                toast("Certificate Type updated");
+            } else {
+                data.id = generateId('CTYPE');
+                create('certTypes', data);
+                toast("Certificate Type created");
+            }
+            closeModal('certTypeModal');
+            loadData();
+        }
+    </script>
+</body>
+</html>

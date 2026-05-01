@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students | Superadmin | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Global Student Registry</h1>
+                <button class="btn btn-primary" onclick="openStudentModal()">Register Student Profile</button>
+            </div>
+
+            <div class="card" style="margin-bottom: 20px;">
+                <input type="text" id="searchInput" placeholder="Search by name, email, or phone..." style="max-width:300px;" oninput="loadData()">
+            </div>
+
+            <div class="card">
+                <div id="studentTable"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Student Modal -->
+    <div id="studentModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Register Student</h2>
+                <button class="modal-close" onclick="closeModal('studentModal')">✕</button>
+            </div>
+            <form id="studentForm">
+                <input type="hidden" id="studentId">
+                <input type="hidden" id="userId">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="stuName" required>
+                </div>
+                <div class="form-group">
+                    <label>Email Access</label>
+                    <input type="email" id="stuEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Password (Auto-generated if empty)</label>
+                    <input type="password" id="stuPassword">
+                </div>
+                <div class="form-group">
+                    <label>Phone Contact</label>
+                    <input type="text" id="stuPhone" required>
+                </div>
+                <div class="form-group">
+                    <label>Assign to University</label>
+                    <input type="text" id="stuSearchUni" placeholder="Filter university..." onkeyup="filterStuUniOptions()" style="margin-bottom:8px; padding:8px; border:1px dashed var(--border-color); font-size:0.85rem; width:100%; box-sizing:border-box;" autocomplete="off">
+                    <select id="stuUniversity" required>
+                        <!-- Filled by JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Enrolled Course</label>
+                    <select id="stuCourses" required>
+                        <option value="">Select a Course...</option>
+                        <!-- Filled by JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Profile Bio</label>
+                    <textarea id="stuBio"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" style="color:var(--text-main); border:1px solid #ccc; background:#fff" onclick="closeModal('studentModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRole('superadmin');
+        let allStudents = [];
+
+        if (session) {
+            renderNav('superadmin');
+            loadDropdowns();
+            loadData();
+        }
+
+        let allStuUnis = [];
+
+        function loadDropdowns() {
+            allStuUnis = getAll('universities').filter(u => u.status === 'active');
+            renderStuUniOptions(allStuUnis);
+
+            const courses = getAll('courseTypes').filter(c => c.status === 'active');
+            let cHtml = '<option value="">Select a Course...</option>';
+            courses.forEach(c => cHtml += `<option value="${c.id}">${c.name}</option>`);
+            document.getElementById('stuCourses').innerHTML = cHtml;
+        }
+
+        function renderStuUniOptions(uniArray) {
+            let uHtml = '<option value="">Select University...</option>';
+            uniArray.forEach(u => uHtml += `<option value="${u.id}">${u.name}</option>`);
+            document.getElementById('stuUniversity').innerHTML = uHtml;
+        }
+
+        window.filterStuUniOptions = function() {
+            const q = document.getElementById('stuSearchUni').value.toLowerCase();
+            const filtered = allStuUnis.filter(u => u.name.toLowerCase().includes(q));
+            renderStuUniOptions(filtered);
+        }
+
+        function loadData() {
+            allStudents = getAll('students');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            
+            const users = getAll('users');
+            
+            let filtered = [];
+            allStudents.forEach(stu => {
+                const u = users.find(x => x.id === stu.userId);
+                if (!u) return; // Broken reference
+                
+                const matchSearch = (u.name || '').toLowerCase().includes(search) || 
+                                    (u.email || '').toLowerCase().includes(search) ||
+                                    (stu.phone || '').includes(search);
+                
+                if (matchSearch) {
+                    filtered.push({ stu, user: u });
+                }
+            });
+            
+            const headers = ['Name', 'Email', 'University', 'Contact', 'Status', 'Actions'];
+            const rows = filtered.map(data => {
+                return [
+                    data.user.name,
+                    data.user.email,
+                    getUniversityName(data.stu.universityId),
+                    data.stu.phone,
+                    getStatusBadge(data.user.status),
+                    `<button class="btn btn-primary" style="padding:4px 8px;font-size:0.8rem;margin-right:5px;" onclick="openStudentModal('${data.stu.id}')">Edit</button>` +
+                    `<button class="btn btn-danger" style="padding:4px 8px;font-size:0.8rem;" onclick="deleteStudent('${data.stu.id}', '${data.user.id}')">Delete</button>`
+                ];
+            });
+            renderTable('studentTable', headers, rows);
+        }
+
+        window.deleteStudent = function(stuId, userId) {
+            confirmDelete("Delete this student profile and user account completely?", () => {
+                remove('students', stuId);
+                remove('users', userId);
+                toast("Student profile deleted", "success");
+                loadData();
+            });
+        }
+
+        window.openStudentModal = function(id = null) {
+            document.getElementById('studentForm').reset();
+            document.getElementById('studentId').value = '';
+            document.getElementById('userId').value = '';
+            document.getElementById('modalTitle').innerText = 'Register Student';
+            document.getElementById('stuCourses').value = '';
+            
+            if (id) {
+                document.getElementById('modalTitle').innerText = 'Edit Student';
+                const stu = getById('students', id);
+                if (stu) {
+                    const u = getById('users', stu.userId);
+                    document.getElementById('studentId').value = stu.id;
+                    document.getElementById('userId').value = u.id;
+                    document.getElementById('stuName').value = u ? u.name : '';
+                    document.getElementById('stuEmail').value = u ? u.email : '';
+                    
+                    document.getElementById('stuPhone').value = stu.phone;
+                    document.getElementById('stuUniversity').value = stu.universityId;
+                    document.getElementById('stuBio').value = stu.bio || '';
+                    
+                    document.getElementById('stuCourses').value = (stu.enrolledCourseTypeIds && stu.enrolledCourseTypeIds.length > 0) ? stu.enrolledCourseTypeIds[0] : '';
+                }
+            }
+            openModal('studentModal');
+        }
+
+        document.getElementById('studentForm').onsubmit = function(e) {
+            e.preventDefault();
+            const sId = document.getElementById('studentId').value;
+            const uId = document.getElementById('userId').value;
+            let pwd = document.getElementById('stuPassword').value;
+            
+            const selectedCourseId = document.getElementById('stuCourses').value;
+            const selectedCourses = selectedCourseId ? [selectedCourseId] : [];
+
+            const uniId = document.getElementById('stuUniversity').value;
+            
+            if (sId && uId) { // Edit
+                const userChanges = {
+                    name: document.getElementById('stuName').value,
+                    email: document.getElementById('stuEmail').value,
+                    universityId: uniId
+                };
+                if (pwd) userChanges.password = pwd;
+                update('users', uId, userChanges);
+                
+                const stuChanges = {
+                    phone: document.getElementById('stuPhone').value,
+                    universityId: uniId,
+                    enrolledCourseTypeIds: selectedCourses,
+                    bio: document.getElementById('stuBio').value
+                };
+                update('students', sId, stuChanges);
+                toast("Student updated");
+            } else { // Create
+                const newUserId = generateId('USR');
+                const userObj = {
+                    id: newUserId,
+                    name: document.getElementById('stuName').value,
+                    email: document.getElementById('stuEmail').value,
+                    password: pwd || 'pass123',
+                    role: 'student',
+                    universityId: uniId,
+                    status: 'active',
+                    createdAt: new Date().toISOString().split('T')[0]
+                };
+                create('users', userObj);
+
+                const stuObj = {
+                    id: generateId('STU'),
+                    userId: newUserId,
+                    universityId: uniId,
+                    enrolledCourseTypeIds: selectedCourses,
+                    phone: document.getElementById('stuPhone').value,
+                    bio: document.getElementById('stuBio').value,
+                    status: 'active'
+                };
+                create('students', stuObj);
+                toast("Student registered");
+            }
+            closeModal('studentModal');
+            loadData();
+        }
+    </script>
+</body>
+</html>

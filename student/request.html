@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Document | Student | CertPro</title>
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <div id="sidebar-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Submit Document Request</h1>
+            </div>
+
+            <div class="card" style="max-width: 600px; margin-bottom: 30px;">
+                <form id="reqForm">
+                    <p style="margin-bottom: 20px; font-size: 0.9rem; color: var(--text-light);">
+                        You can only request certificates for courses you are officially enrolled in. Your university staff and admin will review your request.
+                    </p>
+                    <div class="form-group">
+                        <label>Select Enrolled Course</label>
+                        <select id="reqCourse" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Reason for Request</label>
+                        <textarea id="reqReason" required placeholder="E.g., Required for job application..."></textarea>
+                    </div>
+                    <div style="margin-top: 24px;">
+                        <button type="submit" class="btn btn-primary">Submit Request</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2 style="font-size:1.1rem; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">My Past Requests</h2>
+                <div id="reqTable"></div>
+            </div>
+            
+        </main>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/app.js"></script>
+    <script>
+        const session = requireRoles(['student']);
+        let studentRecord = null;
+
+        if (session) {
+            renderNav('student');
+            loadData();
+            verifyPermissions();
+        }
+
+        function verifyPermissions() {
+            if(!hasPermission('request_cert')) {
+                const btn = document.querySelector('button[type="submit"]');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerText = 'Permission Denied';
+                    btn.style.opacity = '0.5';
+                }
+            }
+        }
+
+        function loadData() {
+            studentRecord = getAll('students').find(s => s.userId === session.userId);
+            if (!studentRecord) return;
+
+            // Load Courses Dropdown (only enrolled)
+            const courses = getAll('courseTypes');
+            let cHtml = '<option value="">Select Enrolled Course...</option>';
+            
+            studentRecord.enrolledCourseTypeIds.forEach(cId => {
+                const c = courses.find(x => x.id === cId);
+                if (c && c.status === 'active') {
+                    cHtml += `<option value="${c.id}">${c.name}</option>`;
+                }
+            });
+            document.getElementById('reqCourse').innerHTML = cHtml;
+
+            // Load Table
+            const myReqs = getAll('requests').filter(r => r.studentId === studentRecord.id);
+            myReqs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            const headers = ['Req ID', 'Course', 'Reason', 'Staff Remarks', 'Admin Remarks', 'Date', 'Status'];
+            const rows = myReqs.map(r => [
+                `<div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-family:monospace;font-size:0.8rem">${r.id}</span>
+                    <button class="btn" style="padding:2px 6px;font-size:0.7rem;background:var(--bg-secondary);color:var(--text-primary);" title="Copy Tracking ID" onclick="copyText('${r.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+                </div>`,
+                getCourseTypeName(r.courseTypeId),
+                `<span title="${r.reason}">${r.reason.substring(0, 30)}${r.reason.length > 30 ? '...' : ''}</span>`,
+                r.staffRemarks || '-',
+                r.adminRemarks || '-',
+                formatDate(r.createdAt),
+                getStatusBadge(r.status)
+            ]);
+            renderTable('reqTable', headers, rows);
+        }
+
+        document.getElementById('reqForm').onsubmit = function(e) {
+            e.preventDefault();
+            if(!hasPermission('request_cert')) return toast('Permission Denied: Missing request_cert permission.', 'error');
+            if (!studentRecord) return;
+
+            const data = {
+                id: generateReqId(),
+                studentId: studentRecord.id,
+                courseTypeId: document.getElementById('reqCourse').value,
+                universityId: studentRecord.universityId,
+                reason: document.getElementById('reqReason').value,
+                status: 'pending',
+                staffRemarks: '',
+                adminRemarks: '',
+                createdAt: new Date().toISOString().split('T')[0]
+            };
+            
+            create('requests', data);
+            toast("Request submitted successfully", "success");
+            
+            document.getElementById('reqForm').reset();
+            loadData();
+        }
+    </script>
+</body>
+</html>

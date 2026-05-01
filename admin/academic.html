@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academic Hub | College Admin | CertPro.io</title>
+    <link rel="stylesheet" href="../assets/style.css">
+    <style>
+        .tabs { display:flex; gap:10px; margin-bottom:30px; border-bottom:1px solid var(--border); }
+        .tab { padding:15px 30px; cursor:pointer; font-weight:700; color:var(--text-muted); border-bottom:3px solid transparent; }
+        .tab.active { color:var(--accent-gold); border-color:var(--accent-gold); }
+    </style>
+</head>
+<body class="layout">
+    <div id="sidebarContainer"></div>
+    <div id="toastContainer" class="toast-container"></div>
+    <main class="main-content">
+        <header style="margin-bottom:60px;display:flex;justify-content:space-between;align-items:flex-end;">
+            <div>
+                <p class="label">College Curriculum</p>
+                <h1>Academic Hub</h1>
+                <p style="color:var(--text-muted);">Manage your college degree programs and certificate templates.</p>
+            </div>
+            <button class="btn btn-primary" id="addBtn" onclick="openModal()">Register Program</button>
+        </header>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('programs')">PROGRAMS</div>
+            <div class="tab" onclick="switchTab('courses')">TEMPLATES</div>
+        </div>
+
+        <div style="margin-bottom:40px;">
+            <input type="text" id="searchInput" placeholder="Search..." style="max-width:400px;padding:18px;">
+        </div>
+
+        <div id="programsSection" class="card" style="padding:0;overflow:hidden;">
+            <table>
+                <thead><tr><th>ID</th><th>Name</th><th>Level</th><th>Action</th></tr></thead>
+                <tbody id="programsBody"></tbody>
+            </table>
+        </div>
+
+        <div id="coursesSection" class="card" style="padding:0;overflow:hidden;display:none;">
+            <table>
+                <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Linked Program</th><th>Action</th></tr></thead>
+                <tbody id="coursesBody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <div id="mainModal" class="modal-overlay" style="display:none;">
+        <div class="modal">
+            <h2 id="modalTitle">Register</h2>
+            <form id="mainForm">
+                <input type="hidden" id="editId">
+                <div class="form-group">
+                    <label class="label">LEGAL NAME</label>
+                    <input type="text" id="itemName" required>
+                </div>
+                <div id="progFields">
+                    <div class="form-group">
+                        <label class="label">LEVEL</label>
+                        <select id="progLevel">
+                            <option value="Undergraduate">Undergraduate</option>
+                            <option value="Postgraduate">Postgraduate</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="courseFields" style="display:none;">
+                    <div class="form-group">
+                        <label class="label">CATEGORY</label>
+                        <select id="courseCat">
+                            <option value="Degree">Degree Certificate</option>
+                            <option value="Merit">Merit / Award</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="label">LINKED PROGRAM</label>
+                        <select id="linkedProg"></select>
+                    </div>
+                </div>
+                <div style="margin-top:40px;display:flex;gap:20px;justify-content:flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../assets/db.js"></script>
+    <script src="../assets/auth.js"></script>
+    <script src="../assets/utils.js"></script>
+    <script src="../assets/seed.js"></script>
+    <script>
+        const session = Auth.guardPage('admin');
+        if (!Auth.guardPermission('manage_programs')) throw new Error('Unauthorized');
+
+        let currentTab = 'programs';
+
+        if (session) {
+            Utils.renderSidebar('admin', 'academic');
+            loadData();
+            Utils.setupSearch('searchInput', 'item-row');
+        }
+
+        function switchTab(t) {
+            currentTab = t;
+            document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.innerText.toLowerCase().includes(t.slice(0,-1))));
+            document.getElementById('programsSection').style.display = t === 'programs' ? 'block' : 'none';
+            document.getElementById('coursesSection').style.display = t === 'courses' ? 'block' : 'none';
+            document.getElementById('addBtn').textContent = `New ${t === 'programs' ? 'Program' : 'Template'}`;
+            loadData();
+        }
+
+        function loadData() {
+            const data = Auth.scopedData(currentTab);
+            const progs = Auth.scopedData('programs');
+            
+            if (currentTab === 'programs') {
+                document.getElementById('programsBody').innerHTML = data.map(p => `
+                    <tr class="item-row">
+                        <td class="mono" style="opacity:.5;font-size:11px;">${p.id}</td>
+                        <td style="font-weight:700;">${p.name}</td>
+                        <td style="font-size:12px;">${p.level}</td>
+                        <td>
+                            <div style="display:flex;gap:8px;">
+                                <button onclick="editItem('${p.id}')" class="btn btn-outline" style="padding:6px 12px;font-size:9px;">EDIT</button>
+                                <button onclick="deleteItem('${p.id}')" class="btn btn-outline" style="padding:6px 12px;font-size:9px;border-color:var(--danger);color:var(--danger);">DELETE</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="4" style="text-align:center;padding:40px;">No programs assigned.</td></tr>';
+            } else {
+                document.getElementById('coursesBody').innerHTML = data.map(c => {
+                    const p = progs.find(x => x.id === c.programId);
+                    return `<tr class="item-row">
+                        <td class="mono" style="opacity:.5;font-size:11px;">${c.id}</td>
+                        <td style="font-weight:700;">${c.name}</td>
+                        <td>${c.category}</td>
+                        <td style="font-size:12px;opacity:.6;">${p ? p.name : 'Unknown Program'}</td>
+                        <td>
+                            <div style="display:flex;gap:8px;">
+                                <button onclick="editItem('${c.id}')" class="btn btn-outline" style="padding:6px 12px;font-size:9px;">EDIT</button>
+                                <button onclick="deleteItem('${c.id}')" class="btn btn-outline" style="padding:6px 12px;font-size:9px;border-color:var(--danger);color:var(--danger);">DELETE</button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('') || '<tr><td colspan="5" style="text-align:center;padding:40px;">No templates found.</td></tr>';
+            }
+        }
+
+        function openModal(id = null) {
+            const m = document.getElementById('mainModal');
+            const progs = Auth.scopedData('programs');
+            m.style.display = 'flex';
+            document.getElementById('progFields').style.display = currentTab === 'programs' ? 'block' : 'none';
+            document.getElementById('courseFields').style.display = currentTab === 'courses' ? 'block' : 'none';
+            
+            document.getElementById('linkedProg').innerHTML = progs.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
+
+            if (id) {
+                const item = DB.getById(currentTab, id);
+                document.getElementById('editId').value = item.id;
+                document.getElementById('itemName').value = item.name;
+                if (currentTab === 'programs') document.getElementById('progLevel').value = item.level;
+                else {
+                    document.getElementById('courseCat').value = item.category;
+                    document.getElementById('linkedProg').value = item.programId || "";
+                }
+                document.getElementById('modalTitle').textContent = `Edit Details`;
+            } else {
+                document.getElementById('mainForm').reset();
+                document.getElementById('editId').value = "";
+                document.getElementById('modalTitle').textContent = `Register Item`;
+            }
+        }
+
+        function closeModal() { document.getElementById('mainModal').style.display = 'none'; }
+
+        document.getElementById('mainForm').onsubmit = (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editId').value;
+            const data = { 
+                name: document.getElementById('itemName').value,
+                universityId: session.universityId
+            };
+            if (currentTab === 'programs') data.level = document.getElementById('progLevel').value;
+            else {
+                data.category = document.getElementById('courseCat').value;
+                data.programId = document.getElementById('linkedProg').value || null;
+            }
+
+            if (id) {
+                DB.update(currentTab, id, data);
+                Utils.toast("Updated successfully.");
+            } else {
+                data.id = DB.generateId(currentTab === 'programs' ? 'PROG' : 'CERT');
+                DB.create(currentTab, data);
+                Utils.toast("Created successfully.");
+            }
+            closeModal(); loadData();
+        };
+
+        window.editItem = (id) => openModal(id);
+        window.deleteItem = (id) => {
+            if (confirm("Delete this academic item?")) {
+                DB.delete(currentTab, id);
+                Utils.toast("Removed.", "danger");
+                loadData();
+            }
+        };
+    </script>
+</body>
+</html>
