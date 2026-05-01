@@ -5,6 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Certificates | Student | CertPro</title>
     <link rel="stylesheet" href="../assets/style.css">
+    <style>
+        .cert-qr-box {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            width: 90px;
+            height: 90px;
+            border: 1px solid #ccc;
+            padding: 4px;
+            background: #fff;
+        }
+        .cert-qr-box img { width: 100%; height: 100%; display: block; }
+        .cert-qr-missing {
+            font-size: 0.6rem;
+            color: #999;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+    </style>
 </head>
 <body>
     <div class="wrapper">
@@ -48,6 +70,11 @@
                         <strong id="cDate">---</strong>
                     </div>
                 </div>
+
+                <!-- QR Code Display Area in Certificate -->
+                <div class="cert-qr-box" id="cQrBox">
+                    <div class="cert-qr-missing">No QR</div>
+                </div>
             </div>
 
             <div class="modal-footer" style="justify-content:space-between; margin-top:20px;">
@@ -80,19 +107,25 @@
             myCerts = getAll('certificates').filter(c => c.studentId === studentRecord.id && c.status === 'issued');
             myCerts.sort((a,b) => new Date(b.issuedAt) - new Date(a.issuedAt));
             
-            const headers = ['Cert ID', 'Course', 'Cert Type', 'Issued Date', 'Actions'];
+            const headers = ['Cert ID', 'Course', 'Cert Type', 'Issued Date', 'QR Status', 'Actions'];
             const rows = myCerts.map(c => {
                 const url = window.location.origin + '/portal.html?tab=verify&id=' + c.id;
+                const qrStatus = c.qrDataUrl 
+                    ? '<span style="color:var(--text-success);font-size:0.8rem;display:flex;align-items:center;gap:4px;"><i data-lucide="check-circle" style="width:14px;height:14px;"></i> Available</span>' 
+                    : '<span style="color:var(--text-tertiary);font-size:0.8rem;">Processing...</span>';
+                
                 return [
                     `<span style="font-family:monospace;font-size:0.8rem">${c.id}</span>`,
                     getCourseTypeName(c.courseTypeId),
                     getCertTypeName(c.certTypeId),
                     formatDate(c.issuedAt),
+                    qrStatus,
                     `<button class="btn btn-primary" style="padding:4px 8px;font-size:0.8rem;margin-right:5px;" onclick="viewCert('${c.id}')">View</button>` +
                     `<button class="btn btn-success" style="padding:4px 8px;font-size:0.8rem;" onclick="showVerifyUrl('${url}')">Verify Link</button>`
                 ];
             });
             renderTable('certsTable', headers, rows);
+            if(window.lucide) window.lucide.createIcons();
         }
 
         window.viewCert = function(id) {
@@ -110,6 +143,13 @@
             document.getElementById('cCourse').innerText = getCourseTypeName(c.courseTypeId);
             document.getElementById('cId').innerText = c.id;
             document.getElementById('cDate').innerText = formatDate(c.issuedAt);
+
+            const qrBox = document.getElementById('cQrBox');
+            if (c.qrDataUrl) {
+                qrBox.innerHTML = `<img src="${c.qrDataUrl}" alt="QR">`;
+            } else {
+                qrBox.innerHTML = `<div class="cert-qr-missing">Processing</div>`;
+            }
 
             document.getElementById('verifyLinkContainer').style.display = 'none';
             openModal('viewModal');

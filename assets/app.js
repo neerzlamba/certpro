@@ -17,6 +17,13 @@
     document.head.appendChild(lucideScript);
   }
 
+  // Inject QRCode.js globally if not present
+  if (!document.querySelector('script[src*="qrcode"]')) {
+    const qrScript = document.createElement('script');
+    qrScript.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+    document.head.appendChild(qrScript);
+  }
+
   window.addEventListener('load', () => {
     setTimeout(() => {
       loader.classList.add('hidden');
